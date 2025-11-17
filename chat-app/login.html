@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="Content-Security-Policy" content="
+  default-src 'self' https://www.gstatic.com https://cdnjs.cloudflare.com https://fonts.googleapis.com https://fonts.gstatic.com;
+  script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.gstatic.com https://cdnjs.cloudflare.com;
+  connect-src 'self' https://*.firebaseio.com https://*.googleapis.com wss:;
+  style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com;
+  font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com;
+  img-src 'self' data: https:;
+">
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - ChatApp</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <div class="glass-card" style="max-width: 440px; margin: 4rem auto;">
+            <!-- Back Button -->
+            <div style="margin-bottom: 2rem;">
+                <a href="index.html" class="btn btn-secondary" style="text-decoration: none;">
+                    ← Zurück zur Startseite
+                </a>
+            </div>
+
+            <!-- Login Form -->
+            <div style="text-align: center; margin-bottom: 2rem;">
+                <h1 style="font-size: 2.5rem; margin-bottom: 0.5rem;">🔐</h1>
+                <h2>Willkommen zurück!</h2>
+                <p style="color: var(--text-secondary);">Melde dich an, um deine Chats fortzusetzen</p>
+            </div>
+
+            <form id="loginForm" class="auth-form" style="max-width: 100%;">
+                <div class="form-group">
+                    <label for="email">📧 Email Adresse</label>
+                    <input type="email" id="email" placeholder="deine@email.com" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="password">🔒 Passwort</label>
+                    <input type="password" id="password" placeholder="••••••••" required>
+                </div>
+
+                <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center; margin-top: 1rem;">
+                    Anmelden
+                </button>
+            </form>
+            
+            <div style="text-align: center; margin-top: 2rem; padding-top: 2rem; border-top: 1px solid var(--border-color);">
+                <p style="color: var(--text-secondary);">
+                    Noch kein Konto? 
+                    <a href="register.html" style="color: var(--accent-blue); text-decoration: none; font-weight: 600;">
+                        Jetzt registrieren
+                    </a>
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase Scripts -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+    
+    <!-- Firebase Config & Auth -->
+    <script src="js/firebase-config.js"></script>
+    <script src="js/auth.js"></script>
+
+    <!-- Einfacher Check ob bereits eingeloggt -->
+    <script>
+        setTimeout(() => {
+            const user = firebase.auth().currentUser;
+            if (user) {
+                console.log('Bereits eingeloggt, weiterleiten...');
+                if (user.email === "martinherklotzt02@gmail.com") {
+                    window.location.href = 'admin.html';
+                } else {
+                    window.location.href = 'dashboard.html';
+                }
+            }
+        }, 1000);
+    </script>
+</body>
+</html>
