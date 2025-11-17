@@ -70,19 +70,7 @@
     <script src="js/auth.js"></script>
     <script src="js/login.js"></script>
 
-    <!-- Einfacher Check ob bereits eingeloggt -->
-    <script>
-        setTimeout(() => {
-            const user = firebase.auth().currentUser;
-            if (user) {
-                console.log('Bereits eingeloggt, weiterleiten...');
-                if (user.email === "martinherklotzt02@gmail.com") {
-                    window.location.href = 'admin.html';
-                } else {
-                    window.location.href = 'dashboard.html';
-                }
-            }
-        }, 1000);
-    </script>
+    
 </body>
+
 </html>
