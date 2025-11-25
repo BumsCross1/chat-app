@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard - Adolf Chat</title>
+<link rel="stylesheet" href="css/style.css">
+<script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-storage-compat.js"></script>
+<script src="js/firebase.js" defer></script>
+<script src="js/dashboard.js" defer></script>
+</head>
+<body>
+  <div class="space-background"></div>
+<div class="stars"></div>
+<div class="dashboard-container">
+  <!-- Sidebar -->
+  <div class="sidebar">
+    <div class="sidebar-header">
+      <h2>💬 Adolf Chat</h2>
+      <div class="user-info">
+        <img id="user-avatar" src="" alt="Avatar" onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iMjAiIGN5PSIyMCIgcj0iMjAiIGZpbGw9IiM2MzY2RjEiLz4KPGNpcmNsZSBjeD0iMjAiIGN5PSIxNiIgcj0iNiIgZmlsbD0id2hpdGUiLz4KPHBhdGggZD0iTTI4IDMwQzI4IDI2LjY4NjMgMjQuNDE4MyAyNCAyMCAyNEMxNS41ODE3IDI0IDEyIDI2LjY4NjMgMTIgMzBWMzRIMjhWMzBaIiBmaWxsPSJ3aGl0ZSIvPgo8L3N2Zz4K'">
+        <span id="user-displayname">User</span>
+      </div>
+    </div>
+    
+    <div class="sidebar-menu">
+      <button class="menu-item active" onclick="showSection('rooms')">
+        🏠 Chat Räume
+      </button>
+      <button class="menu-item" onclick="showSection('create')">
+        ➕ Raum erstellen
+      </button>
+      <button class="menu-item" onclick="showSection('profile')">
+        👤 Profil
+      </button>
+      <button class="menu-item" onclick="showSection('info')">
+        ℹ️ Info
+      </button>
+    </div>
+    
+    <button id="logout-btn" class="logout-btn">🚪 Logout</button>
+  </div>
+
+  <!-- Main Content -->
+  <div class="main-content">
+    <!-- Rooms Section -->
+    <div id="rooms-section" class="content-section active">
+      <div class="section-header">
+        <h1>Verfügbare Chat Räume</h1>
+        <div class="search-container">
+          <input type="text" id="room-search" class="modern-input" placeholder="Räume durchsuchen...">
+        </div>
+      </div>
+      <div id="rooms-list" class="rooms-grid"></div>
+    </div>
+
+    <div id="create-section" class="content-section">
+      <div class="section-header">
+        <h1>Neuen Raum erstellen</h1>
+      </div>
+      <div class="form-card">
+        <div class="input-group">
+          <label>Raum Name</label>
+          <input id="room-name" class="modern-input" placeholder="Cooler Chat Raum...">
+        </div>
+        <div class="input-group">
+          <label>Beschreibung (optional)</label>
+          <input id="room-description" class="modern-input" placeholder="Worum geht's in diesem Raum?">
+        </div>
+        <div class="input-group">
+          <label>Passwort (optional - für privaten Raum)</label>
+          <input id="room-password" type="password" class="modern-input" placeholder="Passwort setzen...">
+        </div>
+        <div class="checkbox-group">
+          <div class="modern-checkbox" id="private-checkbox" onclick="toggleCheckbox('private-checkbox')"></div>
+          <label class="checkbox-label" onclick="toggleCheckbox('private-checkbox')">Als privaten Raum markieren</label>
+        </div>
+        <button id="create-room-btn" class="modern-btn">🎉 Raum erstellen</button>
+      </div>
+    </div>
+
+    <div id="profile-section" class="content-section">
+      <div class="section-header">
+        <h1>Dein Profil</h1>
+      </div>
+      <div class="form-card">
+        <div class="avatar-upload">
+          <img id="profile-avatar" src="" alt="Dein Avatar" class="profile-avatar-img">
+          <div class="upload-controls">
+            <input type="file" id="avatar-upload" accept="image/*" style="display: none;">
+            <button class="modern-btn secondary-btn" onclick="document.getElementById('avatar-upload').click()">📷 Avatar ändern</button>
+            <button class="modern-btn danger-btn" onclick="removeAvatar()">🗑️ Entfernen</button>
+          </div>
+        </div>
+        
+        <div class="input-group">
+          <label>Anzeigename</label>
+          <input id="displayName" class="modern-input" placeholder="Dein cooler Name...">
+        </div>
+        
+        <div class="input-group">
+          <label>Email</label>
+          <input type="email" id="user-email" class="modern-input" disabled>
+        </div>
+        
+        <div class="form-actions">
+          <button id="save-profile-btn" class="modern-btn">💾 Profil speichern</button>
+          <button id="change-password-btn" class="modern-btn secondary-btn">🔒 Passwort ändern</button>
+        </div>
+        
+        <div id="profile-message" class="message"></div>
+      </div>
+    </div>
+
+    <!-- Info Section -->
+    <div id="info-section" class="content-section">
+      <div class="section-header">
+        <h1>Über Adolf Chat</h1>
+      </div>
+      <div class="info-content">
+        <div class="feature-grid">
+          <div class="feature-card">
+            <div class="feature-icon">🚀</div>
+            <h3>Echtzeit Chat</h3>
+            <p>Sofortige Nachrichtenübermittlung ohne Verzögerung</p>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon">🔒</div>
+            <h3>Sichere Räume</h3>
+            <p>Private Räume mit Passwortschutz</p>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon">🎨</div>
+            <h3>Personalisiert</h3>
+            <p>Avatar, Name und Profil anpassbar</p>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon">📱</div>
+            <h3>Responsive</h3>
+            <p>Optimal auf allen Geräten</p>
+          </div>
+        </div>
+        
+        <div class="stats-card">
+          <h3>Statistiken</h3>
+          <div class="stats">
+            <div class="stat">
+              <span class="stat-number" id="total-rooms">0</span>
+              <span class="stat-label">Aktive Räume</span>
+            </div>
+            <div class="stat">
+              <span class="stat-number" id="total-users">0</span>
+              <span class="stat-label">Registrierte User</span>
+            </div>
+            <div class="stat">
+              <span class="stat-number" id="total-messages">0</span>
+              <span class="stat-label">Nachrichten</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>
