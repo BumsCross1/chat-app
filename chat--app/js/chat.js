@@ -149,20 +149,43 @@ function loadEmojiCategory(category) {
 // Füge diese Funktion hinzu:
 async function loadCurrentUserAvatar() {
     const user = auth.currentUser;
-    if (!user) return;
+    if (!user) {
+        console.log('Kein User gefunden');
+        currentUserAvatar = generateDefaultAvatar('User');
+        return;
+    }
 
     try {
+        // Avatar aus Firebase Database laden
         const snapshot = await db.ref(`users/${user.uid}/avatar`).once('value');
-        currentUserAvatar = snapshot.val();
+        const avatarUrl = snapshot.val();
+        
+        if (avatarUrl && avatarUrl !== '') {
+            console.log('Avatar geladen:', avatarUrl);
+            currentUserAvatar = avatarUrl;
+        } else {
+            // Fallback: Default Avatar generieren
+            const displayName = user.displayName || user.email || 'User';
+            currentUserAvatar = generateDefaultAvatar(displayName);
+            console.log('Default Avatar generiert für:', displayName);
+        }
     } catch (error) {
-        console.log('Avatar nicht geladen, verwende Default');
+        console.error('Fehler beim Laden des Avatars:', error);
+        const displayName = user.displayName || user.email || 'User';
+        currentUserAvatar = generateDefaultAvatar(displayName);
     }
-
-    if (!currentUserAvatar) {
-        currentUserAvatar = generateDefaultAvatar(user.displayName || user.email);
-    }
+    
+    // Avatar sofort in der UI anzeigen (falls vorhanden)
+    updateUserAvatarInUI();
 }
 
+// Neue Funktion um Avatar in der UI zu aktualisieren
+function updateUserAvatarInUI() {
+    const ownMessages = document.querySelectorAll('.message.own .message-avatar');
+    ownMessages.forEach(avatar => {
+        avatar.src = currentUserAvatar;
+    });
+}
 function loadMessages() {
     db.ref(`messages/${roomId}`).on('value', (snap) => {
         const data = snap.val() || {};
@@ -185,8 +208,89 @@ function loadMessages() {
         }, 300); // Kurze Verzögerung für sichereres Scrollen
     });
 }
+
+function displayMessage(message) {
+    const messageDiv = document.createElement('div');
+    const isOwnMessage = message.user.uid === auth.currentUser.uid;
+    
+    messageDiv.className = `message ${isOwnMessage ? 'own' : 'other'}`;
+    messageDiv.id = `message-${message.id}`;
+
+    const timestamp = new Date(message.createdAt);
+    const timeString = timestamp.toLocaleTimeString('de-DE', {
+        hour: '2-digit',
+        minute: '2-digit'
+    });
+
+    // 🔴 WICHTIG: Avatar-Quelle korrigieren
+    const avatarSrc = isOwnMessage ? 
+        currentUserAvatar : 
+        generateDefaultAvatar(message.user.displayName);
+
+    let messageContent = '';
+    
+    switch(message.type) {
+        case 'image':
+            messageContent = `
+                <div class="message-image">
+                    <img src="${message.imageUrl}" alt="Gesendetes Bild" class="sent-image" 
+                         onclick="openImageModal('${message.imageUrl}')">
+                </div>
+            `;
+            break;
+            
+        case 'voice':
+            messageContent = `
+                <div class="voice-message">
+                    <button class="play-voice-btn" onclick="playVoiceMessage('${message.audioUrl}')">
+                        🔈 Sprachnachricht (${message.duration || 0}s)
+                    </button>
+                </div>
+            `;
+            break;
+            
+        case 'file':
+            messageContent = `
+                <div class="file-message">
+                    <a href="${message.fileUrl}" download="${message.fileName}" class="file-download">
+                        📎 ${message.fileName} (${(message.fileSize / 1024 / 1024).toFixed(2)} MB)
+                    </a>
+                </div>
+            `;
+            break;
+            
+        case 'game':
+            messageContent = `<div class="game-message">${formatMessageText(message.text)}</div>`;
+            break;
+            
+        default:
+            messageContent = `<div class="message-text">${formatMessageText(message.text)}</div>`;
+    }
+
+    const messageHTML = `
+        <img src="${avatarSrc}" 
+             alt="Avatar" class="message-avatar"
+             onerror="this.src='${generateDefaultAvatar(message.user.displayName)}'">
+        <div class="message-content">
+            <div class="message-header">
+                <span class="message-sender">${escapeHtml(message.user.displayName)}</span>
+                <span class="message-time">${timeString}</span>
+            </div>
+            ${messageContent}
+        </div>
+    `;
+
+    messageDiv.innerHTML = messageHTML;
+    messagesDiv.appendChild(messageDiv);
+
+    // Animation
+    setTimeout(() => {
+        messageDiv.style.opacity = '1';
+        messageDiv.style.transform = 'translateY(0)';
+    }, 10);
+}
 // Und in initChat() aufrufen:
-function initChat() {
+async function initChat() {
     if (!roomId || !roomName) {
         alert('Raum nicht gefunden! Zurück zum Dashboard.');
         window.location.href = 'dashboard.html';
@@ -194,11 +298,17 @@ function initChat() {
     }
 
     roomNameH2.textContent = roomName;
-    loadCurrentUserAvatar(); // DIESE ZEILE HINZUFÜGEN
+    
+    // 🔴 DIESE ZEILE FEHLT oder wird zu spät aufgerufen
+    await loadCurrentUserAvatar(); // WICHTIG: await hinzufügen
+    
     setupEventListeners();
     loadMessages();
     initDropdown();
-    initEmojiPicker(); // EMOJI PICKER INITIALISIEREN
+    initEmojiPicker();
+    
+    // Benachrichtigungs-Berechtigung anfordern
+    requestNotificationPermission();
 }
 // Dropdown Menu für Aktionen
 function initDropdown() {
@@ -493,88 +603,24 @@ function loadMessages() {
     });
 }
 
-function displayMessage(message) {
-    const messageDiv = document.createElement('div');
-    const isOwnMessage = message.user.uid === auth.currentUser.uid;
-    
-    messageDiv.className = `message ${isOwnMessage ? 'own' : 'other'}`;
-    messageDiv.id = `message-${message.id}`;
-
-    const timestamp = new Date(message.createdAt);
-    const timeString = timestamp.toLocaleTimeString('de-DE', {
-        hour: '2-digit',
-        minute: '2-digit'
-    });
-
-    let messageContent = '';
-    
-    switch(message.type) {
-        case 'image':
-            messageContent = `
-                <div class="message-image">
-                    <img src="${message.imageUrl}" alt="Gesendetes Bild" class="sent-image" 
-                         onclick="openImageModal('${message.imageUrl}')">
-                </div>
-            `;
-            break;
-            
-        case 'voice':
-            messageContent = `
-                <div class="voice-message">
-                    <button class="play-voice-btn" onclick="playVoiceMessage('${message.audioUrl}')">
-                        🔈 Sprachnachricht (${message.duration || 0}s)
-                    </button>
-                </div>
-            `;
-            break;
-            
-        case 'file':
-            messageContent = `
-                <div class="file-message">
-                    <a href="${message.fileUrl}" download="${message.fileName}" class="file-download">
-                        📎 ${message.fileName} (${(message.fileSize / 1024 / 1024).toFixed(2)} MB)
-                    </a>
-                </div>
-            `;
-            break;
-            
-        case 'game':
-            messageContent = `<div class="game-message">${formatMessageText(message.text)}</div>`;
-            break;
-            
-        default:
-            messageContent = `<div class="message-text">${formatMessageText(message.text)}</div>`;
-    }
-
-    const messageHTML = `
-        <img src="${isOwnMessage ? currentUserAvatar : generateDefaultAvatar(message.user.displayName)}" 
-             alt="Avatar" class="message-avatar">
-        <div class="message-content">
-            <div class="message-header">
-                <span class="message-sender">${escapeHtml(message.user.displayName)}</span>
-                <span class="message-time">${timeString}</span>
-            </div>
-            ${messageContent}
-        </div>
-    `;
-
-    messageDiv.innerHTML = messageHTML;
-    messagesDiv.appendChild(messageDiv);
-
-    // Animation
-    setTimeout(() => {
-        messageDiv.style.opacity = '1';
-        messageDiv.style.transform = 'translateY(0)';
-    }, 10);
-}
 
 // Utility Functions
 function getUserData() {
     const user = auth.currentUser;
+    if (!user) {
+        return {
+            uid: 'unknown',
+            displayName: 'Unbekannter User',
+            email: ''
+        };
+    }
+
+    // Avatar-URL mit in die Nachricht speichern
     return {
         uid: user.uid,
         displayName: user.displayName || user.email,
-        email: user.email
+        email: user.email,
+        avatar: currentUserAvatar // 🔴 WICHTIG: Avatar mit speichern
     };
 }
 
