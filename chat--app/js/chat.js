@@ -18,6 +18,37 @@ let isSending = false;
 const roomId = localStorage.getItem('roomId');
 const roomName = localStorage.getItem('roomName');
 
+// In chat.js ergänzen
+function showChatError(message) {
+    const errorDiv = document.createElement('div');
+    errorDiv.className = 'message error-message';
+    errorDiv.textContent = message;
+    messagesDiv.appendChild(errorDiv);
+    setTimeout(() => errorDiv.remove(), 5000);
+}
+
+// Debounce für Nachrichten-Loading
+let messageLoadTimer;
+function debounceLoadMessages() {
+    clearTimeout(messageLoadTimer);
+    messageLoadTimer = setTimeout(loadMessages, 300);
+}
+
+// Lazy Loading für Bilder
+function lazyLoadImages() {
+    const images = document.querySelectorAll('.sent-image[data-src]');
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                const img = entry.target;
+                img.src = img.dataset.src;
+                img.removeAttribute('data-src');
+                observer.unobserve(img);
+            }
+        });
+    });
+    images.forEach(img => observer.observe(img));
+}
 // Fix für Mehrfach-Nachrichten
 async function sendMessage() {
     if (isSending) return;
@@ -547,6 +578,49 @@ function getUserData() {
     };
 }
 
+// Push Benachrichtigungen
+function showNotification(sender, message, room) {
+    // Prüfen ob Benachrichtigungen unterstützt werden
+    if (!('Notification' in window)) {
+        console.log('Dieser Browser unterstützt keine Benachrichtigungen');
+        return;
+    }
+    
+    // Berechtigung prüfen/anfragen
+    if (Notification.permission === 'default') {
+        Notification.requestPermission().then(permission => {
+            if (permission === 'granted') {
+                createNotification(sender, message, room);
+            }
+        });
+    } else if (Notification.permission === 'granted') {
+        createNotification(sender, message, room);
+    }
+}
+
+function createNotification(sender, message, room) {
+    // Nur benachrichtigen wenn Tab nicht aktiv ist
+    if (document.hidden) {
+        const notification = new Notification(`💬 ${room}`, {
+            body: `${sender}: ${message.substring(0, 50)}${message.length > 50 ? '...' : ''}`,
+            icon: '/favicon.ico', // Füge ein Icon hinzu
+            badge: '/favicon.ico',
+            tag: 'chat-message', // Verhindert multiple Benachrichtigungen
+            requireInteraction: true // Bleibt bis geklickt
+        });
+        
+        // Beim Klick auf Benachrichtigung Tab fokussieren
+        notification.onclick = function() {
+            window.focus();
+            this.close();
+        };
+        
+        // Automatisch nach 5 Sekunden schließen
+        setTimeout(() => {
+            notification.close();
+        }, 5000);
+    }
+}
 function fileToBase64(file) {
     return new Promise((resolve, reject) => {
         const reader = new FileReader();

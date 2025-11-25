@@ -1920,3 +1920,42 @@ body {
       transform: translateY(0);
   }
 }
+/* In style.css ergänzen */
+.particle {
+  position: absolute;
+  background: white;
+  border-radius: 50%;
+  animation: float 6s infinite ease-in-out;
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px) rotate(0deg); }
+  50% { transform: translateY(-20px) rotate(180deg); }
+}
+/* In style.css hinzufügen */
+@media (max-width: 768px) {
+  .message {
+      max-width: 90%;
+      margin-left: 0 !important;
+      margin-right: 0 !important;
+  }
+  
+  .chat-input-container {
+      padding: 15px;
+      gap: 10px;
+  }
+  
+  .dropdown-content {
+      position: fixed;
+      bottom: 70px;
+      right: 10px;
+      left: 10px;
+      grid-template-columns: repeat(3, 1fr);
+  }
+  
+  /* Größere Touch-Targets */
+  .emoji-btn, .game-btn, .dropdown-action {
+      min-height: 44px;
+      min-width: 44px;
+  }
+}
