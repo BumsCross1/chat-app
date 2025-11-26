@@ -37,10 +37,22 @@
   
   <div id="messages" class="messages"></div>
   
-  <div class="chat-input-container">
-    <input id="msg-input" class="modern-input" placeholder="Nachricht...">
-    <button id="send-btn" class="modern-btn">Senden</button>
-  </div>
+<!-- Fixed Chat Input -->
+<div class="chat-input-container">
+  <input 
+      id="msg-input" 
+      class="chat-input-field" 
+      placeholder="💬 Schreibe eine Nachricht... (Enter zum Senden)"
+      maxlength="1000"
+      aria-label="Nachricht eingeben"
+  >
+  <button id="send-btn" class="chat-send-btn">
+      <span class="btn-text">Senden</span>
+      <span class="btn-loading" style="display: none;">
+          <div class="spinner"></div>
+      </span>
+  </button>
+</div>
 
   <!-- Emoji Picker -->
   <div id="emoji-picker" class="emoji-picker hidden">

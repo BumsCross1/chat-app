@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Profil - NextGen Chat</title>
+<title>Profil - Space Chat</title>
 <link rel="stylesheet" href="css/style.css">
 <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-auth-compat.js"></script>
@@ -11,17 +11,106 @@
 <script src="js/profile.js" defer></script>
 </head>
 <body>
-<div class="container">
-  <div class="card">
-    <h2>Profil bearbeiten</h2>
-    <input id="displayName" placeholder="Anzeigename">
-    <div class="flex-gap">
-      <button id="save-btn">Speichern</button>
-      <button id="pw-btn">Passwort ändern</button>
+  <div class="space-background"></div>
+  <div class="stars"></div>
+  <div class="planets"></div>
+  <div class="asteroids"></div>
+  
+<div class="auth-container">
+  <div class="auth-card">
+    <div class="auth-header">
+      <h1>👤 Profil bearbeiten</h1>
     </div>
-    <div id="msg"></div>
-    <button id="back-btn">Zurück</button>
+    
+    <div class="form-card">
+      <div class="avatar-upload">
+        <img id="profile-avatar" src="" alt="Dein Avatar" class="profile-avatar-img">
+        <div class="upload-controls">
+          <input type="file" id="avatar-upload" accept="image/*" style="display: none;">
+          <button class="modern-btn secondary-btn" onclick="document.getElementById('avatar-upload').click()">
+            📷 Avatar ändern
+          </button>
+        </div>
+      </div>
+      
+      <div class="input-group">
+        <label>Anzeigename</label>
+        <input id="displayName" class="modern-input" placeholder="Dein Name...">
+      </div>
+      
+      <div class="input-group">
+        <label>Email</label>
+        <input type="email" id="user-email" class="modern-input" disabled>
+      </div>
+      
+      <div class="user-stats">
+        <div class="stat-item">
+          <span class="stat-value" id="stat-messages">0</span>
+          <span class="stat-label">Nachrichten</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-value" id="stat-rooms">0</span>
+          <span class="stat-label">Räume</span>
+        </div>
+      </div>
+      
+      <div class="form-actions">
+        <button id="save-btn" class="modern-btn cosmic-btn">💾 Speichern</button>
+        <button id="back-btn" class="modern-btn secondary-btn">← Zurück</button>
+      </div>
+      
+      <div id="msg" class="notification"></div>
+    </div>
   </div>
 </div>
+
+<script>
+// Simple profile functionality
+document.addEventListener('DOMContentLoaded', () => {
+    const user = auth.currentUser;
+    if (user) {
+        document.getElementById('displayName').value = user.displayName || '';
+        document.getElementById('user-email').value = user.email;
+        
+        // Load avatar
+        db.ref(`users/${user.uid}/avatar`).once('value').then(snapshot => {
+            const avatar = snapshot.val();
+            if (avatar) {
+                document.getElementById('profile-avatar').src = avatar;
+            }
+        });
+    }
+    
+    document.getElementById('save-btn').addEventListener('click', async () => {
+        try {
+            const user = auth.currentUser;
+            await user.updateProfile({
+                displayName: document.getElementById('displayName').value
+            });
+            
+            document.getElementById('msg').textContent = '✅ Profil gespeichert!';
+            document.getElementById('msg').className = 'notification notification-success';
+        } catch(e) { 
+            document.getElementById('msg').textContent = '❌ Fehler: ' + e.message;
+            document.getElementById('msg').className = 'notification notification-error';
+        }
+    });
+    
+    document.getElementById('back-btn').addEventListener('click', () => {
+        window.location.href = 'dashboard.html';
+    });
+    
+    document.getElementById('avatar-upload').addEventListener('change', async (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                document.getElementById('profile-avatar').src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+    });
+});
+</script>
 </body>
 </html>

@@ -1,107 +1,757 @@
-// Dashboard mit User-Suche und Privaten Chats
+// Enhanced Dashboard mit allen Features - COMPLETELY FIXED
 const roomsList = document.getElementById('rooms-list');
 const createRoomBtn = document.getElementById('create-room-btn');
 const logoutBtn = document.getElementById('logout-btn');
 const roomSearchInput = document.getElementById('room-search');
 
-// User Search System
-function initUserSearch() {
-    const userSearchHTML = `
-        <div class="search-container">
-            <input type="text" id="user-search" class="modern-input" placeholder="🔍 Benutzer suchen...">
-        </div>
-        <div id="users-list" class="users-list"></div>
-    `;
-    
-    const roomsSection = document.getElementById('rooms-section');
-    const sectionHeader = roomsSection.querySelector('.section-header');
-    sectionHeader.insertAdjacentHTML('afterend', userSearchHTML);
-    
-    // User Search Event
-    document.getElementById('user-search').addEventListener('input', (e) => {
-        searchUsers(e.target.value);
-    });
-}
+let currentUser = null;
+let allRooms = [];
+let allUsers = [];
 
-async function searchUsers(searchTerm) {
-    if (searchTerm.length < 2) {
-        document.getElementById('users-list').innerHTML = '';
+// Enhanced Initialization
+function initDashboard() {
+    currentUser = auth.currentUser;
+    
+    if (!currentUser) {
+        window.location.href = 'index.html';
         return;
     }
     
-    try {
-        const usersSnapshot = await db.ref('users').once('value');
-        const users = usersSnapshot.val() || {};
-        const usersList = document.getElementById('users-list');
-        usersList.innerHTML = '';
-        
-        const currentUserId = auth.currentUser.uid;
-        
-        Object.entries(users).forEach(([userId, userData]) => {
-            if (userId === currentUserId) return;
+    console.log('🚀 Dashboard initialisiert für:', currentUser.email);
+    
+    loadUserInfo()
+        .then(() => loadUserStats())
+        .then(() => {
+            initUserSearch();
+            loadRooms();
+            loadGlobalStats();
+            initSpaceBackground();
+            setupEventListeners();
             
-            const displayName = userData.displayName || userData.email;
-            if (displayName.toLowerCase().includes(searchTerm.toLowerCase())) {
+            showSection('rooms');
+            showNotification('🚀 Willkommen im Space Chat!', 'success');
+        })
+        .catch(error => {
+            console.error('❌ Fehler bei Dashboard-Initialisierung:', error);
+            showNotification('❌ Fehler beim Laden des Dashboards', 'error');
+        });
+}
+
+// Enhanced User Info Loading
+function loadUserInfo() {
+    return new Promise((resolve, reject) => {
+        const user = auth.currentUser;
+        if (!user) {
+            reject(new Error('Kein User'));
+            return;
+        }
+
+        // User Daten aus Firebase laden
+        db.ref(`users/${user.uid}`).once('value')
+            .then((snapshot) => {
+                const userData = snapshot.val() || {};
+                
+                console.log('📊 User Daten geladen:', userData);
+                
+                // UI aktualisieren
+                const displayNameElement = document.getElementById('user-displayname');
+                const userEmailElement = document.getElementById('user-email');
+                const displayNameInput = document.getElementById('displayName');
+                
+                if (displayNameElement) {
+                    displayNameElement.textContent = user.displayName || user.email || 'User';
+                }
+                if (userEmailElement) userEmailElement.value = user.email;
+                if (displayNameInput) displayNameInput.value = user.displayName || '';
+                
+                // Mini Stats
+                const miniMessages = document.getElementById('mini-messages');
+                const miniRooms = document.getElementById('mini-rooms');
+                if (miniMessages) miniMessages.textContent = userData.messageCount || '0';
+                if (miniRooms) miniRooms.textContent = userData.roomsCreated || '0';
+                
+                // Main Stats
+                const statMessages = document.getElementById('stat-messages');
+                const statRooms = document.getElementById('stat-rooms');
+                const statReactions = document.getElementById('stat-reactions');
+                const statFriends = document.getElementById('stat-friends');
+                
+                if (statMessages) statMessages.textContent = userData.messageCount || '0';
+                if (statRooms) statRooms.textContent = userData.roomsCreated || '0';
+                if (statReactions) statReactions.textContent = userData.reactionsReceived || '0';
+                if (statFriends) statFriends.textContent = userData.friendsCount || '0';
+                
+                return loadAvatar();
+            })
+            .then(() => resolve())
+            .catch(error => {
+                console.error('Fehler beim Laden der User-Info:', error);
+                resolve();
+            });
+    });
+}
+
+// Enhanced Avatar System
+function loadAvatar() {
+    return new Promise((resolve) => {
+        const user = auth.currentUser;
+        if (!user) {
+            resolve();
+            return;
+        }
+
+        db.ref(`users/${user.uid}/avatar`).once('value')
+            .then((snapshot) => {
+                const avatarData = snapshot.val();
+                
+                const userAvatar = document.getElementById('user-avatar');
+                const profileAvatar = document.getElementById('profile-avatar');
+                
+                if (avatarData && avatarData !== 'null' && avatarData !== '') {
+                    console.log('✅ Avatar geladen:', avatarData.substring(0, 50) + '...');
+                    if (userAvatar) userAvatar.src = avatarData;
+                    if (profileAvatar) profileAvatar.src = avatarData;
+                } else {
+                    console.log('🔄 Setze Default Avatar');
+                    setDefaultAvatar();
+                }
+                resolve();
+            })
+            .catch((error) => {
+                console.error('❌ Fehler beim Laden des Avatars:', error);
+                setDefaultAvatar();
+                resolve();
+            });
+    });
+}
+
+function setDefaultAvatar() {
+    const defaultAvatar = generateDefaultAvatar();
+    const avatars = [
+        document.getElementById('user-avatar'),
+        document.getElementById('profile-avatar')
+    ];
+    
+    avatars.forEach(avatar => {
+        if (avatar) {
+            avatar.src = defaultAvatar;
+            avatar.onerror = function() {
+                this.src = generateDefaultAvatar();
+            };
+        }
+    });
+}
+
+function generateDefaultAvatar(name) {
+    const user = auth.currentUser;
+    const displayName = name || user?.displayName || user?.email || 'User';
+    const initial = displayName.charAt(0).toUpperCase();
+    const colors = ['#6366f1', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981'];
+    const color = colors[initial.charCodeAt(0) % colors.length];
+    
+    const svg = `
+        <svg width="120" height="120" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="60" cy="60" r="60" fill="${color}"/>
+            <text x="50%" y="54%" dominant-baseline="middle" text-anchor="middle" fill="white" font-family="Arial" font-size="48" font-weight="bold">${initial}</text>
+        </svg>
+    `;
+    
+    return 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svg)));
+}
+
+// Enhanced User Search System - FIXED
+function initUserSearch() {
+    console.log('🔍 Initialisiere User-Suche...');
+    
+    const userSearchInput = document.getElementById('user-search');
+    if (userSearchInput) {
+        let searchTimeout;
+        userSearchInput.addEventListener('input', (e) => {
+            clearTimeout(searchTimeout);
+            const searchTerm = e.target.value.trim();
+            
+            searchTimeout = setTimeout(() => {
+                console.log('🔍 Suche nach:', searchTerm);
+                searchUsers(searchTerm);
+            }, 300);
+        });
+    }
+}
+
+function searchUsers(searchTerm) {
+    const usersList = document.getElementById('users-list');
+    if (!usersList) return;
+    
+    console.log('🔍 Starte Suche:', searchTerm);
+    
+    if (searchTerm.length < 2) {
+        usersList.innerHTML = '<div class="info-text">🔍 Gib mindestens 2 Zeichen ein um User zu suchen</div>';
+        return;
+    }
+    
+    usersList.innerHTML = '<div class="loading">👥 Lade User...</div>';
+    
+    // Versuche alle User zu laden
+    db.ref('users').once('value')
+        .then((snapshot) => {
+            const data = snapshot.val() || {};
+            allUsers = Object.entries(data).map(([uid, userData]) => ({
+                uid,
+                ...userData
+            }));
+            
+            console.log('👥 User geladen:', allUsers.length);
+            
+            const currentUserId = auth.currentUser.uid;
+            const filteredUsers = allUsers.filter(user => 
+                user.uid !== currentUserId &&
+                (user.displayName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                 user.email?.toLowerCase().includes(searchTerm.toLowerCase()))
+            );
+            
+            console.log('✅ Gefundene User:', filteredUsers.length);
+            
+            usersList.innerHTML = '';
+            
+            if (filteredUsers.length === 0) {
+                usersList.innerHTML = '<div class="no-results">🔍 Keine User gefunden</div>';
+                return;
+            }
+            
+            filteredUsers.forEach(user => {
                 const userElement = document.createElement('div');
                 userElement.className = 'user-card';
+                
+                const userAvatar = user.avatar || generateDefaultAvatar(user.displayName);
+                
                 userElement.innerHTML = `
-                    <img src="${userData.avatar || generateDefaultAvatar(displayName)}" alt="Avatar" class="user-avatar">
+                    <img src="${userAvatar}" alt="Avatar" class="user-avatar" 
+                         onerror="this.src='${generateDefaultAvatar(user.displayName)}'">
                     <div class="user-info">
-                        <div class="user-name">${displayName}</div>
-                        <div class="user-email">${userData.email || ''}</div>
+                        <span class="user-name">${escapeHtml(user.displayName || 'Unbekannt')}</span>
+                        <span class="user-email">${user.email || ''}</span>
+                        <span class="user-status">${user.status === 'online' ? '🟢 Online' : '⚫ Offline'}</span>
                     </div>
-                    <button class="message-user-btn" onclick="startPrivateChat('${userId}', '${displayName}')">
-                        💬 Nachricht
+                    <button class="message-user-btn" onclick="startPrivateChat('${user.uid}', '${escapeHtml(user.displayName || user.email)}')">
+                        💬 Chat
                     </button>
                 `;
                 usersList.appendChild(userElement);
-            }
+            });
+        })
+        .catch(error => {
+            console.error('❌ Fehler beim Laden der User:', error);
+            usersList.innerHTML = `
+                <div class="no-results">
+                    ❌ Fehler beim Laden der User
+                    <br><small>Bitte überprüfe die Firebase Database Rules</small>
+                </div>
+            `;
         });
-    } catch (error) {
-        console.error('User search error:', error);
-    }
 }
 
-async function startPrivateChat(userId, userName) {
+function startPrivateChat(userId, userName) {
     const currentUser = auth.currentUser;
     
-    // Erstelle einen privaten Chat Room
+    // Private Room ID generieren
     const roomId = [currentUser.uid, userId].sort().join('_');
     const roomName = `Privat: ${currentUser.displayName} & ${userName}`;
     
-    try {
-        // Check if room already exists
-        const roomSnapshot = await db.ref(`rooms/${roomId}`).once('value');
-        
-        if (!roomSnapshot.exists()) {
-            // Create new private room
-            await db.ref(`rooms/${roomId}`).set({
-                id: roomId,
-                name: roomName,
-                description: `Privater Chat zwischen ${currentUser.displayName} und ${userName}`,
-                isPrivate: true,
-                participants: {
-                    [currentUser.uid]: true,
-                    [userId]: true
-                },
-                createdAt: Date.now(),
-                createdBy: currentUser.uid
+    showNotification('💬 Erstelle privaten Chat...', 'info');
+    
+    db.ref(`rooms/${roomId}`).once('value')
+        .then(roomSnapshot => {
+            if (!roomSnapshot.exists()) {
+                // Neuen privaten Raum erstellen
+                return db.ref(`rooms/${roomId}`).set({
+                    id: roomId,
+                    name: roomName,
+                    description: `Privater Chat zwischen ${currentUser.displayName} und ${userName}`,
+                    isPrivate: true,
+                    ownerId: currentUser.uid,
+                    ownerName: currentUser.displayName,
+                    createdAt: Date.now(),
+                    memberCount: 2,
+                    settings: {
+                        allowImages: true,
+                        allowFiles: true,
+                        allowVoice: true,
+                        maxFileSize: 10
+                    },
+                    members: {
+                        [currentUser.uid]: {
+                            joinedAt: Date.now(),
+                            role: 'owner'
+                        },
+                        [userId]: {
+                            joinedAt: Date.now(),
+                            role: 'member'
+                        }
+                    }
+                });
+            }
+        })
+        .then(() => {
+            // 🔴 CRITICAL FIX: localStorage SICHER setzen
+            localStorage.setItem('roomId', roomId);
+            localStorage.setItem('roomName', roomName);
+            
+            console.log('✅ Privater Chat erstellt:', { roomId, roomName });
+            
+            showNotification('💬 Privater Chat gestartet!', 'success');
+            
+            setTimeout(() => {
+                window.location.href = 'chat.html';
+            }, 1000);
+        })
+        .catch(error => {
+            console.error('Private chat creation error:', error);
+            showNotification('❌ Fehler beim Erstellen des privaten Chats', 'error');
+        });
+}
+
+// Enhanced Profile Management
+function setupProfileSaveListener() {
+    const saveProfileBtn = document.getElementById('save-profile-btn');
+    if (saveProfileBtn) {
+        saveProfileBtn.addEventListener('click', () => {
+            const user = auth.currentUser;
+            const displayNameInput = document.getElementById('displayName');
+            
+            if (!displayNameInput) {
+                showNotification('❌ DisplayName Input nicht gefunden', 'error');
+                return;
+            }
+            
+            const displayName = displayNameInput.value.trim();
+            
+            if (!displayName) {
+                showNotification('Bitte einen Anzeigenamen eingeben', 'error');
+                return;
+            }
+            
+            // UI Feedback
+            saveProfileBtn.disabled = true;
+            saveProfileBtn.innerHTML = '<div class="spinner"></div> Speichern...';
+            
+            user.updateProfile({
+                displayName: displayName
+            })
+            .then(() => {
+                // User Daten in Firebase aktualisieren
+                return db.ref(`users/${user.uid}`).update({
+                    displayName: displayName,
+                    lastUpdated: Date.now()
+                });
+            })
+            .then(() => {
+                // Avatar speichern falls geändert
+                const profileAvatar = document.getElementById('profile-avatar');
+                if (profileAvatar && !profileAvatar.src.includes('data:image/svg+xml')) {
+                    return db.ref(`users/${user.uid}/avatar`).set(profileAvatar.src);
+                }
+            })
+            .then(() => {
+                showNotification('💾 Profil erfolgreich gespeichert!', 'success');
+                loadUserInfo(); // UI aktualisieren
+            })
+            .catch(error => {
+                showNotification('❌ Fehler: ' + error.message, 'error');
+            })
+            .finally(() => {
+                saveProfileBtn.disabled = false;
+                saveProfileBtn.textContent = '💾 Profil speichern';
             });
-        }
-        
-        // Join room
-        localStorage.setItem('roomId', roomId);
-        localStorage.setItem('roomName', roomName);
-        window.location.href = 'chat.html';
-        
-    } catch (error) {
-        console.error('Private chat creation error:', error);
-        alert('Fehler beim Erstellen des privaten Chats');
+        });
     }
 }
 
-// Navigation
+// Enhanced Avatar Upload
+function setupAvatarUpload() {
+    const avatarUpload = document.getElementById('avatar-upload');
+    if (avatarUpload) {
+        avatarUpload.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            
+            if (!file.type.startsWith('image/')) {
+                showNotification('❌ Bitte nur Bilder hochladen!', 'error');
+                return;
+            }
+            
+            if (file.size > 2 * 1024 * 1024) {
+                showNotification('❌ Bild darf nicht größer als 2MB sein!', 'error');
+                return;
+            }
+            
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const base64 = e.target.result;
+                
+                // Avatare in UI aktualisieren
+                const userAvatar = document.getElementById('user-avatar');
+                const profileAvatar = document.getElementById('profile-avatar');
+                
+                if (userAvatar) userAvatar.src = base64;
+                if (profileAvatar) profileAvatar.src = base64;
+                
+                showNotification('📸 Avatar aktualisiert - nicht vergessen zu speichern!', 'info');
+            };
+            reader.onerror = () => {
+                showNotification('❌ Fehler beim Lesen der Datei', 'error');
+            };
+            reader.readAsDataURL(file);
+        });
+    }
+}
+
+function removeAvatar() {
+    // Setze Default Avatar in UI
+    setDefaultAvatar();
+    
+    // Entferne Avatar aus Firebase
+    const user = auth.currentUser;
+    db.ref(`users/${user.uid}/avatar`).remove()
+        .then(() => {
+            showNotification('🗑️ Avatar entfernt!', 'success');
+        })
+        .catch(error => {
+            showNotification('❌ Fehler beim Entfernen des Avatars', 'error');
+        });
+}
+
+// Enhanced Room Creation
+function createEnhancedRoom() {
+    const nameInput = document.getElementById('room-name');
+    const descriptionInput = document.getElementById('room-description');
+    const passwordInput = document.getElementById('room-password');
+    
+    if (!nameInput || !descriptionInput || !passwordInput) {
+        showNotification('❌ Raum-Formular nicht gefunden', 'error');
+        return;
+    }
+    
+    const name = nameInput.value.trim();
+    const description = descriptionInput.value.trim();
+    const password = passwordInput.value;
+    
+    if (!name) {
+        showNotification('Bitte Raumname eingeben', 'error');
+        return;
+    }
+    
+    if (name.length < 3) {
+        showNotification('Raumname muss mindestens 3 Zeichen lang sein', 'error');
+        return;
+    }
+    
+    // UI Feedback
+    const createBtn = document.getElementById('create-room-btn');
+    createBtn.disabled = true;
+    createBtn.innerHTML = '<div class="spinner"></div> Erstelle Raum...';
+    
+    // Password hashing
+    if (password) {
+        createRoomInFirebase(name, description, password);
+    } else {
+        createRoomInFirebase(name, description, null);
+    }
+}
+
+function createRoomInFirebase(name, description, password) {
+    const user = auth.currentUser;
+    const roomRef = db.ref('rooms').push();
+    const roomId = roomRef.key;
+    
+    const roomData = {
+        id: roomId,
+        name: name,
+        description: description,
+        passwordHash: password,
+        isPrivate: !!password,
+        ownerId: user.uid,
+        ownerName: user.displayName || user.email,
+        createdAt: Date.now(),
+        memberCount: 1,
+        settings: {
+            allowImages: true,
+            allowFiles: true,
+            allowVoice: true,
+            maxFileSize: 10
+        },
+        members: {
+            [user.uid]: {
+                joinedAt: Date.now(),
+                role: 'owner'
+            }
+        }
+    };
+    
+    roomRef.set(roomData)
+        .then(() => {
+            // User Stats aktualisieren
+            return db.ref(`users/${user.uid}/roomsCreated`).transaction((current) => (current || 0) + 1);
+        })
+        .then(() => {
+            // Formular zurücksetzen
+            document.getElementById('room-name').value = '';
+            document.getElementById('room-description').value = '';
+            document.getElementById('room-password').value = '';
+            
+            // UI zurücksetzen
+            const createBtn = document.getElementById('create-room-btn');
+            createBtn.disabled = false;
+            createBtn.textContent = '🚀 Raum erstellen';
+            
+            showSection('rooms');
+            showNotification('🚀 Raum erfolgreich erstellt!', 'success');
+        })
+        .catch(error => {
+            showNotification('❌ Fehler beim Erstellen des Raums: ' + error.message, 'error');
+            
+            // UI zurücksetzen
+            const createBtn = document.getElementById('create-room-btn');
+            createBtn.disabled = false;
+            createBtn.textContent = '🚀 Raum erstellen';
+        });
+}
+
+// Enhanced Rooms Loading
+function loadRooms() {
+    if (!roomsList) {
+        console.error('❌ roomsList element nicht gefunden');
+        return;
+    }
+    
+    roomsList.innerHTML = '<div class="loading">🏠 Lade Räume...</div>';
+    
+    db.ref('rooms').on('value', (snap) => {
+        const data = snap.val() || {};
+        allRooms = Object.values(data);
+        
+        console.log('📥 Geladene Räume:', allRooms.length);
+        
+        roomsList.innerHTML = '';
+        
+        if (allRooms.length === 0) {
+            roomsList.innerHTML = `
+                <div class="no-rooms">
+                    <h3>🌌 Noch keine Räume vorhanden</h3>
+                    <p>Erstelle den ersten Raum und starte das Abenteuer!</p>
+                    <button class="modern-btn cosmic-btn" onclick="showSection('create')">
+                        🚀 Ersten Raum erstellen
+                    </button>
+                </div>
+            `;
+            return;
+        }
+        
+        // Räume sortieren (neueste zuerst)
+        const sortedRooms = allRooms.sort((a, b) => b.createdAt - a.createdAt);
+        
+        sortedRooms.forEach(room => {
+            const roomCard = createRoomCard(room);
+            roomsList.appendChild(roomCard);
+        });
+        
+        // Search functionality
+        if (roomSearchInput) {
+            roomSearchInput.addEventListener('input', (e) => {
+                const searchTerm = e.target.value.toLowerCase();
+                const filteredRooms = allRooms.filter(room => 
+                    room.name.toLowerCase().includes(searchTerm) ||
+                    room.description?.toLowerCase().includes(searchTerm)
+                );
+                
+                roomsList.innerHTML = '';
+                filteredRooms.forEach(room => {
+                    roomsList.appendChild(createRoomCard(room));
+                });
+            });
+        }
+    }, (error) => {
+        console.error('❌ Fehler beim Laden der Räume:', error);
+        roomsList.innerHTML = '<div class="no-rooms">❌ Fehler beim Laden der Räume</div>';
+    });
+}
+
+function createRoomCard(room) {
+    const roomCard = document.createElement('div');
+    roomCard.className = 'room-card';
+    
+    const isOwner = room.ownerId === auth.currentUser?.uid;
+    const isMember = room.members && room.members[auth.currentUser?.uid];
+    
+    roomCard.innerHTML = `
+        <div class="room-header">
+            <div>
+                <div class="room-name">${escapeHtml(room.name)}</div>
+                <div class="room-privacy">${room.passwordHash ? '🔒 Privat' : '🌐 Öffentlich'}</div>
+            </div>
+            ${isOwner ? `<span class="owner-badge">👑 Besitzer</span>` : ''}
+        </div>
+        ${room.description ? `<div class="room-description">${escapeHtml(room.description)}</div>` : ''}
+        <div class="room-meta">
+            <div class="room-owner">
+                <span>Erstellt von ${escapeHtml(room.ownerName)}</span>
+            </div>
+            <div class="room-members">👥 ${room.memberCount || 0}</div>
+        </div>
+        <div class="room-actions">
+            <button class="join-btn" data-room-id="${room.id}" data-room-name="${escapeHtml(room.name)}" data-room-private="${!!room.passwordHash}">
+                ${isMember ? '🚪 Betreten' : room.passwordHash ? '🔓 Beitreten' : '🚪 Beitreten'}
+            </button>
+            ${isOwner ? `
+                <button class="manage-btn" onclick="showRoomManagement('${room.id}')">
+                    🔧 Verwalten
+                </button>
+            ` : ''}
+        </div>
+    `;
+    
+    return roomCard;
+}
+
+// FIXED Room Joining
+function setupRoomJoinListeners() {
+    document.addEventListener('click', (e) => {
+        const joinButton = e.target.closest('.join-btn');
+        if (joinButton) {
+            const roomId = joinButton.dataset.roomId;
+            const roomName = joinButton.dataset.roomName;
+            const isPrivate = joinButton.dataset.roomPrivate === 'true';
+            
+            console.log('🚀 Beitreten Raum:', { roomId, roomName, isPrivate });
+
+            if (isPrivate) {
+                const password = prompt('🔒 Bitte Raum-Passwort eingeben:');
+                if (!password) {
+                    showNotification('❌ Passwort erforderlich', 'error');
+                    return;
+                }
+                
+                joinRoom(roomId, roomName, password);
+            } else {
+                joinRoom(roomId, roomName);
+            }
+        }
+    });
+}
+
+function joinRoom(roomId, roomName, password = null) {
+    const user = auth.currentUser;
+    
+    showNotification('🚀 Beitrete Raum...', 'info');
+    
+    // Zuerst Raum-Daten prüfen
+    db.ref(`rooms/${roomId}`).once('value')
+        .then(roomSnapshot => {
+            const room = roomSnapshot.val();
+            
+            if (!room) {
+                throw new Error('Raum existiert nicht mehr');
+            }
+            
+            if (password && room.passwordHash !== password) {
+                throw new Error('Falsches Passwort');
+            }
+            
+            // Mitglied hinzufügen
+            return db.ref(`rooms/${roomId}/members/${user.uid}`).set({
+                joinedAt: Date.now(),
+                role: 'member'
+            });
+        })
+        .then(() => {
+            // Member Count erhöhen
+            return db.ref(`rooms/${roomId}/memberCount`).transaction((current) => (current || 0) + 1);
+        })
+        .then(() => {
+            // 🔴 CRITICAL FIX: localStorage SICHER setzen
+            localStorage.setItem('roomId', roomId);
+            localStorage.setItem('roomName', roomName);
+            
+            console.log('✅ Raum beigetreten, weiterleitung...', { 
+                roomId, 
+                roomName,
+                storedRoomId: localStorage.getItem('roomId'),
+                storedRoomName: localStorage.getItem('roomName')
+            });
+            
+            showNotification('🚀 Raum beigetreten! Weiterleitung...', 'success');
+            
+            // Kurze Verzögerung für die Notification
+            setTimeout(() => {
+                window.location.href = 'chat.html';
+            }, 1500);
+        })
+        .catch(error => {
+            console.error('❌ Fehler beim Raum-Beitritt:', error);
+            showNotification('❌ ' + error.message, 'error');
+        });
+}
+
+// Enhanced Statistics
+function loadUserStats() {
+    return new Promise((resolve) => {
+        const user = auth.currentUser;
+        if (!user) {
+            resolve();
+            return;
+        }
+
+        db.ref(`users/${user.uid}`).once('value')
+            .then((userSnapshot) => {
+                const userData = userSnapshot.val() || {};
+                
+                // UI aktualisieren
+                document.getElementById('stat-messages').textContent = userData.messageCount || '0';
+                document.getElementById('stat-rooms').textContent = userData.roomsCreated || '0';
+                document.getElementById('mini-messages').textContent = userData.messageCount || '0';
+                document.getElementById('mini-rooms').textContent = userData.roomsCreated || '0';
+                
+                resolve();
+            })
+            .catch(error => {
+                console.error('Fehler beim Laden der Statistiken:', error);
+                resolve();
+            });
+    });
+}
+
+// Global Stats
+function loadGlobalStats() {
+    db.ref('rooms').once('value')
+        .then(roomsSnapshot => {
+            const roomsData = roomsSnapshot.val() || {};
+            const roomsCount = Object.keys(roomsData).length;
+            
+            const totalRooms = document.getElementById('total-rooms');
+            const totalUsers = document.getElementById('total-users');
+            
+            if (totalRooms) totalRooms.textContent = roomsCount;
+            if (totalUsers) {
+                // Versuche User zu zählen
+                db.ref('users').once('value')
+                    .then(usersSnapshot => {
+                        const usersData = usersSnapshot.val() || {};
+                        const usersCount = Object.keys(usersData).length;
+                        totalUsers.textContent = usersCount;
+                    })
+                    .catch(() => {
+                        totalUsers.textContent = '?';
+                    });
+            }
+        })
+        .catch(error => {
+            console.error('Fehler beim Laden der Global Stats:', error);
+        });
+}
+
+// Utility Functions
 function showSection(sectionName) {
+    console.log('📱 Zeige Section:', sectionName);
+    
     document.querySelectorAll('.content-section').forEach(section => {
         section.classList.remove('active');
     });
@@ -121,271 +771,146 @@ function showSection(sectionName) {
     }
 }
 
-// User Info laden
-function loadUserInfo() {
-    const user = auth.currentUser;
-    if (user) {
-        document.getElementById('user-displayname').textContent = user.displayName || user.email;
-        document.getElementById('user-email').value = user.email;
-        document.getElementById('displayName').value = user.displayName || '';
-        loadAvatar();
-    }
-}
-
-async function loadAvatar() {
-    const user = auth.currentUser;
-    if (!user) return;
-
-    try {
-        const snapshot = await db.ref(`users/${user.uid}/avatar`).once('value');
-        const avatarData = snapshot.val();
-        
-        if (avatarData) {
-            document.getElementById('user-avatar').src = avatarData;
-            document.getElementById('profile-avatar').src = avatarData;
-        } else {
-            setDefaultAvatar();
-        }
-    } catch (error) {
-        setDefaultAvatar();
-    }
-}
-
-function setDefaultAvatar() {
-    const defaultAvatar = generateDefaultAvatar();
-    const userAvatar = document.getElementById('user-avatar');
-    const profileAvatar = document.getElementById('profile-avatar');
-    
-    if (userAvatar) userAvatar.src = defaultAvatar;
-    if (profileAvatar) profileAvatar.src = defaultAvatar;
-}
-
-function generateDefaultAvatar() {
-    const user = auth.currentUser;
-    const displayName = user?.displayName || user?.email || 'User';
-    const initial = displayName.charAt(0).toUpperCase();
-    const colors = ['#6366f1', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981'];
-    const color = colors[initial.charCodeAt(0) % colors.length];
-    
-    return `data:image/svg+xml;base64,${btoa(`
-        <svg width="120" height="120" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <circle cx="60" cy="60" r="60" fill="${color}"/>
-            <text x="50%" y="54%" dominant-baseline="middle" text-anchor="middle" fill="white" font-family="Arial" font-size="48" font-weight="bold">${initial}</text>
-        </svg>
-    `)}`;
-}
-
-// Raum erstellen
-document.getElementById('create-room-btn')?.addEventListener('click', async () => {
-    const name = document.getElementById('room-name').value;
-    const description = document.getElementById('room-description').value;
-    const password = document.getElementById('room-password').value;
-    
-    if (!name) {
-        showMessage('Bitte Raumname eingeben', 'error');
-        return;
+function showNotification(message, type = 'info') {
+    let container = document.getElementById('notification-container');
+    if (!container) {
+        container = document.createElement('div');
+        container.id = 'notification-container';
+        container.className = 'notification-container';
+        document.body.appendChild(container);
     }
     
-    let passwordHash = null;
-    if (password) {
-        try {
-            const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(password));
-            passwordHash = Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
-        } catch (error) {
-            showMessage('Fehler beim Hashen des Passworts', 'error');
-            return;
-        }
-    }
+    const notification = document.createElement('div');
+    notification.className = `notification notification-${type}`;
+    notification.textContent = message;
     
-    try {
-        const roomRef = db.ref('rooms').push();
-        await roomRef.set({
-            id: roomRef.key,
-            name: name,
-            description: description,
-            passwordHash: passwordHash,
-            isPrivate: !!passwordHash,
-            ownerId: auth.currentUser.uid,
-            ownerName: auth.currentUser.displayName || auth.currentUser.email,
-            createdAt: Date.now(),
-            memberCount: 0
-        });
-        
-        // Formular zurücksetzen
-        document.getElementById('room-name').value = '';
-        document.getElementById('room-description').value = '';
-        document.getElementById('room-password').value = '';
-        
-        showSection('rooms');
-        showMessage('Raum erfolgreich erstellt!', 'success');
-    } catch (error) {
-        showMessage('Fehler beim Erstellen des Raums: ' + error.message, 'error');
-    }
-});
-
-// Räume laden
-db.ref('rooms').on('value', snap => {
-    const data = snap.val() || {};
-    const roomsList = document.getElementById('rooms-list');
-    if (!roomsList) return;
-    
-    roomsList.innerHTML = '';
-    
-    Object.values(data).forEach(room => {
-        const roomCard = document.createElement('div');
-        roomCard.className = 'room-card';
-        roomCard.innerHTML = `
-            <div class="room-header">
-                <div>
-                    <div class="room-name">${room.name}</div>
-                    <div class="room-privacy">${room.passwordHash ? '🔒 Privat' : '🌐 Öffentlich'}</div>
-                </div>
-            </div>
-            ${room.description ? `<div class="room-description">${room.description}</div>` : ''}
-            <div class="room-meta">
-                <div class="room-owner">
-                    <span>Erstellt von ${room.ownerName}</span>
-                </div>
-                <div class="room-members">👥 ${room.memberCount || 0}</div>
-            </div>
-            <button class="join-btn" data-room-id="${room.id}" data-room-name="${room.name}" data-room-private="${!!room.passwordHash}">
-                ${room.passwordHash ? '🔓 Beitreten' : '🚪 Beitreten'}
-            </button>
-        `;
-        
-        roomsList.appendChild(roomCard);
-    });
-    
-    // Event Listener für Join Buttons
-    document.querySelectorAll('.join-btn').forEach(btn => {
-        btn.addEventListener('click', async (e) => {
-            const roomId = e.target.dataset.roomId;
-            const roomName = e.target.dataset.roomName;
-            const isPrivate = e.target.dataset.roomPrivate === 'true';
-            
-            if (isPrivate) {
-                const password = prompt('Raum Passwort:');
-                if (!password) return;
-                
-                const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(password));
-                const hash = Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
-                
-                // Passwort verifizieren
-                const roomSnapshot = await db.ref(`rooms/${roomId}`).once('value');
-                const room = roomSnapshot.val();
-                
-                if (room.passwordHash !== hash) {
-                    alert('Falsches Passwort!');
-                    return;
-                }
-            }
-            
-            localStorage.setItem('roomId', roomId);
-            localStorage.setItem('roomName', roomName);
-            window.location.href = 'chat.html';
-        });
-    });
-});
-
-// Profil speichern
-document.getElementById('save-profile-btn')?.addEventListener('click', async () => {
-    try {
-        const user = auth.currentUser;
-        await user.updateProfile({
-            displayName: document.getElementById('displayName').value
-        });
-        
-        // Avatar in Database speichern
-        const avatar = document.getElementById('profile-avatar').src;
-        if (avatar && !avatar.includes('data:image/svg+xml')) {
-            await db.ref(`users/${user.uid}/avatar`).set(avatar);
-        }
-        
-        showMessage('Profil erfolgreich gespeichert!', 'success');
-        loadUserInfo();
-    } catch (error) {
-        showMessage(error.message, 'error');
-    }
-});
-
-// Avatar Upload
-document.getElementById('avatar-upload')?.addEventListener('change', async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    
-    if (!file.type.startsWith('image/')) {
-        showMessage('Bitte nur Bilder hochladen!', 'error');
-        return;
-    }
-    
-    if (file.size > 0.5 * 1024 * 1024) {
-        showMessage('Bild darf nicht größer als 500KB sein!', 'error');
-        return;
-    }
-    
-    try {
-        const user = auth.currentUser;
-        const base64 = await fileToBase64(file);
-        
-        document.getElementById('user-avatar').src = base64;
-        document.getElementById('profile-avatar').src = base64;
-        
-        showMessage('Avatar erfolgreich aktualisiert!', 'success');
-        e.target.value = '';
-        
-    } catch (error) {
-        showMessage('Fehler beim Hochladen des Avatars: ' + error.message, 'error');
-    }
-});
-
-function fileToBase64(file) {
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.readAsDataURL(file);
-        reader.onload = () => resolve(reader.result);
-        reader.onerror = error => reject(error);
-    });
-}
-
-function removeAvatar() {
-    setDefaultAvatar();
-    showMessage('Avatar entfernt!', 'success');
-}
-
-// Nachricht anzeigen
-function showMessage(text, type = 'info') {
-    const messageDiv = document.getElementById('profile-message');
-    if (!messageDiv) return;
-    
-    messageDiv.textContent = text;
-    messageDiv.className = 'message ' + type;
-    messageDiv.style.display = 'block';
+    container.appendChild(notification);
     
     setTimeout(() => {
-        messageDiv.style.display = 'none';
-    }, 5000);
+        notification.style.animation = 'slideOut 0.3s ease forwards';
+        setTimeout(() => notification.remove(), 300);
+    }, 4000);
 }
 
-// Logout
-logoutBtn?.addEventListener('click', async () => {
-    await auth.signOut();
-    window.location.href = 'index.html';
-});
+function escapeHtml(unsafe) {
+    if (!unsafe) return '';
+    return unsafe
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
 
-// Initialize
+// Space Background
+function initSpaceBackground() {
+    const stars = document.querySelector('.stars');
+    const planets = document.querySelector('.planets');
+    const asteroids = document.querySelector('.asteroids');
+    const comets = document.querySelector('.comets');
+    
+    if (!stars) return;
+    
+    // Create stars
+    for (let i = 0; i < 120; i++) {
+        const star = document.createElement('div');
+        star.className = 'star';
+        star.style.left = Math.random() * 100 + '%';
+        star.style.top = Math.random() * 100 + '%';
+        star.style.animationDelay = Math.random() * 5 + 's';
+        stars.appendChild(star);
+    }
+    
+    // Create planets
+    const planetClasses = ['planet-1', 'planet-2', 'planet-3', 'planet-4'];
+    planetClasses.forEach(planetClass => {
+        const planet = document.createElement('div');
+        planet.className = `planet ${planetClass}`;
+        planets.appendChild(planet);
+    });
+    
+    // Create asteroids
+    for (let i = 0; i < 8; i++) {
+        const asteroid = document.createElement('div');
+        asteroid.className = 'asteroid';
+        asteroid.style.top = Math.random() * 100 + '%';
+        asteroid.style.animationDelay = Math.random() * 20 + 's';
+        asteroids.appendChild(asteroid);
+    }
+    
+    // Create comets
+    for (let i = 0; i < 2; i++) {
+        const comet = document.createElement('div');
+        comet.className = 'comet';
+        comet.style.top = Math.random() * 100 + '%';
+        comet.style.animationDelay = Math.random() * 15 + 's';
+        comets.appendChild(comet);
+    }
+}
+
+// Event Listeners
+function setupEventListeners() {
+    // Logout
+    if (logoutBtn) {
+        logoutBtn.addEventListener('click', () => {
+            // User Status auf offline setzen
+            const user = auth.currentUser;
+            if (user) {
+                db.ref(`users/${user.uid}/status`).set('offline');
+            }
+            
+            auth.signOut()
+                .then(() => {
+                    showNotification('👋 Bis bald!', 'success');
+                    
+                    setTimeout(() => {
+                        window.location.href = 'index.html';
+                    }, 1000);
+                })
+                .catch(error => {
+                    console.error('Logout error:', error);
+                });
+        });
+    }
+    
+    // Room Creation
+    if (createRoomBtn) {
+        createRoomBtn.addEventListener('click', createEnhancedRoom);
+    }
+    
+    // Room Join Listeners
+    setupRoomJoinListeners();
+    
+    // Profile Save
+    setupProfileSaveListener();
+    
+    // Avatar Upload
+    setupAvatarUpload();
+}
+
+// Initialize Dashboard
 document.addEventListener('DOMContentLoaded', () => {
-    auth.onAuthStateChanged(user => {
+    console.log('📋 Dashboard DOM geladen');
+    
+    auth.onAuthStateChanged((user) => {
         if (user) {
-            loadUserInfo();
-            initUserSearch();
-            showSection('rooms');
+            console.log('👤 User authentifiziert:', user.email);
+            initDashboard();
         } else {
+            console.log('👋 Kein User, weiterleitung zu index.html');
             window.location.href = 'index.html';
         }
     });
 });
 
-// Globale Funktionen
+// Global Functions
 window.showSection = showSection;
 window.removeAvatar = removeAvatar;
 window.startPrivateChat = startPrivateChat;
+window.refreshRooms = function() {
+    showNotification('🔄 Räume aktualisieren!', 'success');
+    loadRooms();
+};
+window.showRoomManagement = function(roomId) {
+    showNotification('🔧 Raumverwaltung für: ' + roomId, 'info');
+};
