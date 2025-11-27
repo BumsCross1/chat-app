@@ -54,6 +54,19 @@
   </button>
 </div>
 
+<!-- In chat.html, ersetze den dropdown-content Teil -->
+<div class="dropdown-content">
+  <button class="dropdown-action" onclick="toggleTheme()">
+      <span id="theme-icon">🌙</span> Theme wechseln
+  </button>
+  <button class="dropdown-action" onclick="toggleGamesMenu()">🎮 Spiele</button>
+  <button class="dropdown-action" onclick="toggleVoiceRecording()">🎤 Voice</button>
+  <button class="dropdown-action" onclick="toggleEmojiPicker()">😊 Emoji</button>
+  <button class="dropdown-action" onclick="openImageUpload()">🖼️ Bild</button>
+  <button class="dropdown-action" onclick="openFileModal()">📎 Datei</button>
+  <button class="dropdown-action" onclick="showRoomManagement()">🔧 Raum</button>
+  <button class="dropdown-action" onclick="exportChat()">📤 Export</button>
+</div>
   <!-- Emoji Picker -->
   <div id="emoji-picker" class="emoji-picker hidden">
     <div class="emoji-categories">

@@ -2523,3 +2523,201 @@ body {
       font-size: 0.85rem;
   }
 }
+/* ===== LIGHT THEME ===== */
+[data-theme="light"] {
+  --primary: #6366f1;
+  --primary-dark: #4f46e5;
+  --primary-light: #8b5cf6;
+  --space-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  --nebula-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  --galaxy-gradient: linear-gradient(45deg, #f0f4ff, #e6f0ff, #d9e8ff, #cfe2ff);
+  --cosmic-gradient: linear-gradient(135deg, #667eea, #764ba2, #f093fb, #f5576c);
+  --bg-space: #f8fafc;
+  --bg-deep-space: #f1f5f9;
+  --bg-card: rgba(255, 255, 255, 0.95);
+  --bg-card-hover: rgba(255, 255, 255, 0.98);
+  --bg-input: rgba(0, 0, 0, 0.05);
+  --text: #1e293b;
+  --text-muted: #64748b;
+  --border: rgba(99, 102, 241, 0.3);
+  --border-light: rgba(99, 102, 241, 0.2);
+  --success: #10b981;
+  --error: #ef4444;
+  --warning: #f59e0b;
+  --own-msg: rgba(99, 102, 241, 0.15);
+  --other-msg: rgba(241, 245, 249, 0.8);
+}
+
+[data-theme="light"] body {
+  background: var(--galaxy-gradient);
+  color: var(--text);
+}
+
+[data-theme="light"] .space-background {
+  background: 
+    radial-gradient(circle at 20% 80%, rgba(99, 102, 241, 0.1) 0%, transparent 50%),
+    radial-gradient(circle at 80% 20%, rgba(139, 92, 246, 0.1) 0%, transparent 50%),
+    radial-gradient(circle at 40% 40%, rgba(79, 70, 229, 0.08) 0%, transparent 50%),
+    var(--galaxy-gradient);
+  animation: nebulaPulse 20s infinite ease-in-out;
+}
+
+[data-theme="light"] .star {
+  background: var(--text-muted);
+  opacity: 0.6;
+}
+
+[data-theme="light"] .planet {
+  opacity: 0.7;
+  filter: blur(0.5px);
+}
+
+[data-theme="light"] .asteroid {
+  background: rgba(100, 116, 139, 0.2);
+  box-shadow: 0 0 8px rgba(100, 116, 139, 0.3);
+}
+
+[data-theme="light"] .comet {
+  background: var(--text-muted);
+  box-shadow: 0 0 15px var(--text-muted);
+}
+
+[data-theme="light"] .comet::after {
+  background: linear-gradient(90deg, var(--text-muted), transparent);
+}
+
+[data-theme="light"] .auth-card,
+[data-theme="light"] .sidebar,
+[data-theme="light"] .room-card,
+[data-theme="light"] .form-card,
+[data-theme="light"] .feature-card,
+[data-theme="light"] .modal-content,
+[data-theme="light"] .emoji-picker,
+[data-theme="light"] .games-menu,
+[data-theme="light"] .notification,
+[data-theme="light"] .reaction-menu,
+[data-theme="light"] .dropdown-content {
+  background: var(--bg-card);
+  backdrop-filter: blur(20px);
+  border: 1px solid var(--border);
+  color: var(--text);
+}
+
+[data-theme="light"] .modern-input,
+[data-theme="light"] .chat-input-field {
+  background: var(--bg-input);
+  border: 2px solid var(--border);
+  color: var(--text);
+}
+
+[data-theme="light"] .modern-input:focus,
+[data-theme="light"] .chat-input-field:focus {
+  border-color: var(--primary);
+  background: rgba(99, 102, 241, 0.05);
+}
+
+[data-theme="light"] .modern-input::placeholder,
+[data-theme="light"] .chat-input-field::placeholder {
+  color: var(--text-muted);
+}
+
+[data-theme="light"] .message.own {
+  background: var(--own-msg);
+  border: 1px solid rgba(99, 102, 241, 0.3);
+}
+
+[data-theme="light"] .message.other {
+  background: var(--other-msg);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+[data-theme="light"] .message-reaction {
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+}
+
+[data-theme="light"] .user-stats-mini,
+[data-theme="light"] .stat-item,
+[data-theme="light"] .member-item,
+[data-theme="light"] .user-card {
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+}
+
+[data-theme="light"] .management-tabs,
+[data-theme="light"] .tab-btn {
+  background: var(--bg-input);
+}
+
+[data-theme="light"] .tab-btn.active {
+  background: var(--primary);
+  color: white;
+}
+
+[data-theme="light"] .menu-item:hover,
+[data-theme="light"] .game-btn:hover,
+[data-theme="light"] .dropdown-action:hover {
+  background: var(--primary);
+  color: white;
+}
+
+[data-theme="light"] .secondary-btn {
+  background: transparent;
+  border: 2px solid var(--border);
+  color: var(--text);
+}
+
+[data-theme="light"] .secondary-btn:hover {
+  background: var(--bg-input);
+  border-color: var(--primary);
+}
+
+/* Scrollbar für Light Theme */
+[data-theme="light"] ::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+[data-theme="light"] ::-webkit-scrollbar-thumb {
+  background: var(--cosmic-gradient);
+}
+
+[data-theme="light"] .messages::-webkit-scrollbar-thumb {
+  background: var(--cosmic-gradient);
+}
+
+/* Chat Header für Light Theme */
+[data-theme="light"] .chat-header,
+[data-theme="light"] .chat-input-container {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(20px);
+  border-color: var(--border);
+}
+
+/* Theme Toggle Button */
+.theme-toggle-btn {
+  background: var(--bg-input);
+  border: 2px solid var(--border);
+  border-radius: 12px;
+  padding: 10px 15px;
+  color: var(--text);
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+}
+
+.theme-toggle-btn:hover {
+  background: var(--primary);
+  color: white;
+  border-color: var(--primary);
+  transform: translateY(-2px);
+}
+
+/* Responsive Anpassungen für Light Theme */
+@media (max-width: 768px) {
+  [data-theme="light"] .sidebar {
+    background: rgba(255, 255, 255, 0.98);
+  }
+}

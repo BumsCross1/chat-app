@@ -8,6 +8,32 @@ let currentUser = null;
 let allRooms = [];
 let allUsers = [];
 
+// Enhanced Theme System for Dashboard
+function initTheme() {
+    const savedTheme = localStorage.getItem('chat-theme') || 'dark';
+    setTheme(savedTheme);
+}
+
+function setTheme(theme) {
+    document.body.setAttribute('data-theme', theme);
+    localStorage.setItem('chat-theme', theme);
+    
+    // Update theme icon
+    const themeIcon = document.getElementById('dashboard-theme-icon');
+    if (themeIcon) {
+        themeIcon.textContent = theme === 'light' ? '🌙' : '☀️';
+    }
+    
+    console.log('✅ Dashboard Theme geändert zu:', theme);
+}
+
+function toggleTheme() {
+    const currentTheme = document.body.getAttribute('data-theme') || 'dark';
+    const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+    setTheme(newTheme);
+    showNotification(`Theme zu ${newTheme === 'light' ? '☀️ Light' : '🌙 Dark'} geändert`, 'success');
+}
+
 // Enhanced Initialization
 function initDashboard() {
     currentUser = auth.currentUser;
@@ -18,6 +44,9 @@ function initDashboard() {
     }
     
     console.log('🚀 Dashboard initialisiert für:', currentUser.email);
+    
+    // Theme initialisieren
+    initTheme();
     
     loadUserInfo()
         .then(() => loadUserStats())
@@ -91,28 +120,44 @@ function loadUserInfo() {
     });
 }
 
-// Enhanced Avatar System
+// FIXED: Enhanced Avatar System with Immediate Persistence
 function loadAvatar() {
     return new Promise((resolve) => {
         const user = auth.currentUser;
         if (!user) {
+            console.log('❌ Kein User für Avatar-Load');
             resolve();
             return;
         }
 
+        console.log('🔄 Lade Avatar für User:', user.uid);
+        
         db.ref(`users/${user.uid}/avatar`).once('value')
             .then((snapshot) => {
                 const avatarData = snapshot.val();
+                console.log('📥 Avatar Daten empfangen:', avatarData ? 'Ja' : 'Nein');
                 
                 const userAvatar = document.getElementById('user-avatar');
                 const profileAvatar = document.getElementById('profile-avatar');
                 
                 if (avatarData && avatarData !== 'null' && avatarData !== '') {
-                    console.log('✅ Avatar geladen:', avatarData.substring(0, 50) + '...');
-                    if (userAvatar) userAvatar.src = avatarData;
-                    if (profileAvatar) profileAvatar.src = avatarData;
+                    console.log('✅ Avatar aus Database geladen');
+                    if (userAvatar) {
+                        userAvatar.src = avatarData;
+                        userAvatar.onerror = function() {
+                            console.error('❌ Fehler beim Laden des Avatar-Bildes');
+                            this.src = generateDefaultAvatar();
+                        };
+                    }
+                    if (profileAvatar) {
+                        profileAvatar.src = avatarData;
+                        profileAvatar.onerror = function() {
+                            console.error('❌ Fehler beim Laden des Profil-Avatar-Bildes');
+                            this.src = generateDefaultAvatar();
+                        };
+                    }
                 } else {
-                    console.log('🔄 Setze Default Avatar');
+                    console.log('🔄 Kein Avatar gefunden, setze Default');
                     setDefaultAvatar();
                 }
                 resolve();
@@ -122,6 +167,118 @@ function loadAvatar() {
                 setDefaultAvatar();
                 resolve();
             });
+    });
+}
+
+// FIXED: Avatar sofort speichern mit besserem Error Handling
+function setupAvatarUpload() {
+    const avatarUpload = document.getElementById('avatar-upload');
+    if (avatarUpload) {
+        avatarUpload.addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) {
+                console.log('❌ Keine Datei ausgewählt');
+                return;
+            }
+            
+            if (!file.type.startsWith('image/')) {
+                showNotification('❌ Bitte nur Bilder hochladen!', 'error');
+                return;
+            }
+            
+            if (file.size > 2 * 1024 * 1024) {
+                showNotification('❌ Bild darf nicht größer als 2MB sein!', 'error');
+                return;
+            }
+            
+            console.log('🔄 Starte Avatar Upload...');
+            
+            try {
+                const base64 = await fileToBase64(file);
+                console.log('✅ Bild zu Base64 konvertiert, Länge:', base64.length);
+                
+                // Avatare in UI aktualisieren
+                const userAvatar = document.getElementById('user-avatar');
+                const profileAvatar = document.getElementById('profile-avatar');
+                
+                if (userAvatar) {
+                    userAvatar.src = base64;
+                    console.log('✅ User Avatar in UI aktualisiert');
+                }
+                if (profileAvatar) {
+                    profileAvatar.src = base64;
+                    console.log('✅ Profile Avatar in UI aktualisiert');
+                }
+                
+                // SOFORT in Database speichern
+                const user = auth.currentUser;
+                if (user) {
+                    console.log('💾 Speichere Avatar in Database...');
+                    await db.ref(`users/${user.uid}/avatar`).set(base64);
+                    console.log('✅ Avatar erfolgreich in Database gespeichert');
+                    showNotification('✅ Avatar gespeichert!', 'success');
+                } else {
+                    console.error('❌ Kein User für Avatar-Speicherung');
+                    showNotification('❌ Fehler: Nicht eingeloggt', 'error');
+                }
+                
+            } catch (error) {
+                console.error('❌ Fehler beim Hochladen des Avatars:', error);
+                showNotification('❌ Fehler beim Hochladen des Avatars', 'error');
+            }
+        });
+    } else {
+        console.error('❌ Avatar Upload Element nicht gefunden');
+    }
+}
+
+// FIXED: Avatar entfernen mit besserem Feedback
+function removeAvatar() {
+    const user = auth.currentUser;
+    if (!user) {
+        showNotification('❌ Nicht eingeloggt', 'error');
+        return;
+    }
+    
+    console.log('🗑️ Entferne Avatar...');
+    
+    // Setze Default Avatar in UI
+    setDefaultAvatar();
+    
+    // Entferne Avatar aus Firebase
+    db.ref(`users/${user.uid}/avatar`).remove()
+        .then(() => {
+            console.log('✅ Avatar aus Database entfernt');
+            showNotification('🗑️ Avatar entfernt!', 'success');
+        })
+        .catch(error => {
+            console.error('❌ Fehler beim Entfernen des Avatars:', error);
+            showNotification('❌ Fehler beim Entfernen des Avatars', 'error');
+        });
+}
+
+// FIXED: Utility function for file conversion with error handling
+function fileToBase64(file) {
+    return new Promise((resolve, reject) => {
+        try {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = () => {
+                console.log('✅ FileReader erfolgreich');
+                resolve(reader.result);
+            };
+            reader.onerror = (error) => {
+                console.error('❌ FileReader Fehler:', error);
+                reject(error);
+            };
+            reader.onabort = () => {
+                console.error('❌ FileReader abgebrochen');
+                reject(new Error('Upload abgebrochen'));
+            };
+        } catch (error) {
+            console.error('❌ Fehler in fileToBase64:', error);
+            reject(error);
+        }
     });
 }
 
@@ -157,6 +314,80 @@ function generateDefaultAvatar(name) {
     `;
     
     return 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svg)));
+}
+
+// FIXED: Avatar sofort speichern
+function setupAvatarUpload() {
+    const avatarUpload = document.getElementById('avatar-upload');
+    if (avatarUpload) {
+        avatarUpload.addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            
+            if (!file.type.startsWith('image/')) {
+                showNotification('❌ Bitte nur Bilder hochladen!', 'error');
+                return;
+            }
+            
+            if (file.size > 2 * 1024 * 1024) {
+                showNotification('❌ Bild darf nicht größer als 2MB sein!', 'error');
+                return;
+            }
+            
+            try {
+                const base64 = await fileToBase64(file);
+                
+                // Avatare in UI aktualisieren
+                const userAvatar = document.getElementById('user-avatar');
+                const profileAvatar = document.getElementById('profile-avatar');
+                
+                if (userAvatar) userAvatar.src = base64;
+                if (profileAvatar) profileAvatar.src = base64;
+                
+                // SOFORT in Database speichern
+                const user = auth.currentUser;
+                if (user) {
+                    await db.ref(`users/${user.uid}/avatar`).set(base64);
+                    showNotification('✅ Avatar gespeichert!', 'success');
+                    console.log('✅ Avatar in Database gespeichert');
+                }
+                
+            } catch (error) {
+                console.error('❌ Fehler beim Hochladen des Avatars:', error);
+                showNotification('❌ Fehler beim Hochladen des Avatars', 'error');
+            }
+        });
+    }
+}
+
+// FIXED: Avatar entfernen
+function removeAvatar() {
+    const user = auth.currentUser;
+    if (!user) return;
+    
+    // Setze Default Avatar in UI
+    setDefaultAvatar();
+    
+    // Entferne Avatar aus Firebase
+    db.ref(`users/${user.uid}/avatar`).remove()
+        .then(() => {
+            showNotification('🗑️ Avatar entfernt!', 'success');
+            console.log('✅ Avatar aus Database entfernt');
+        })
+        .catch(error => {
+            console.error('❌ Fehler beim Entfernen des Avatars:', error);
+            showNotification('❌ Fehler beim Entfernen des Avatars', 'error');
+        });
+}
+
+// Utility function for file conversion
+function fileToBase64(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = error => reject(error);
+    });
 }
 
 // Enhanced User Search System - FIXED
@@ -364,60 +595,6 @@ function setupProfileSaveListener() {
             });
         });
     }
-}
-
-// Enhanced Avatar Upload
-function setupAvatarUpload() {
-    const avatarUpload = document.getElementById('avatar-upload');
-    if (avatarUpload) {
-        avatarUpload.addEventListener('change', (e) => {
-            const file = e.target.files[0];
-            if (!file) return;
-            
-            if (!file.type.startsWith('image/')) {
-                showNotification('❌ Bitte nur Bilder hochladen!', 'error');
-                return;
-            }
-            
-            if (file.size > 2 * 1024 * 1024) {
-                showNotification('❌ Bild darf nicht größer als 2MB sein!', 'error');
-                return;
-            }
-            
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                const base64 = e.target.result;
-                
-                // Avatare in UI aktualisieren
-                const userAvatar = document.getElementById('user-avatar');
-                const profileAvatar = document.getElementById('profile-avatar');
-                
-                if (userAvatar) userAvatar.src = base64;
-                if (profileAvatar) profileAvatar.src = base64;
-                
-                showNotification('📸 Avatar aktualisiert - nicht vergessen zu speichern!', 'info');
-            };
-            reader.onerror = () => {
-                showNotification('❌ Fehler beim Lesen der Datei', 'error');
-            };
-            reader.readAsDataURL(file);
-        });
-    }
-}
-
-function removeAvatar() {
-    // Setze Default Avatar in UI
-    setDefaultAvatar();
-    
-    // Entferne Avatar aus Firebase
-    const user = auth.currentUser;
-    db.ref(`users/${user.uid}/avatar`).remove()
-        .then(() => {
-            showNotification('🗑️ Avatar entfernt!', 'success');
-        })
-        .catch(error => {
-            showNotification('❌ Fehler beim Entfernen des Avatars', 'error');
-        });
 }
 
 // Enhanced Room Creation
@@ -905,6 +1082,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // Global Functions
 window.showSection = showSection;
+window.toggleTheme = toggleTheme;
 window.removeAvatar = removeAvatar;
 window.startPrivateChat = startPrivateChat;
 window.refreshRooms = function() {

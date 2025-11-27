@@ -145,6 +145,52 @@ function syncAvatarFromDashboard() {
     });
 }
 
+// Enhanced Theme System
+function initTheme() {
+    const savedTheme = localStorage.getItem('chat-theme') || 'dark';
+    setTheme(savedTheme);
+}
+
+function setTheme(theme) {
+    document.body.setAttribute('data-theme', theme);
+    localStorage.setItem('chat-theme', theme);
+    
+    // Update theme icon
+    const themeIcon = document.getElementById('theme-icon');
+    if (themeIcon) {
+        themeIcon.textContent = theme === 'light' ? '🌙' : '☀️';
+    }
+    
+    // Update button text if exists
+    const themeButtons = document.querySelectorAll('.dropdown-action[onclick*="toggleTheme"]');
+    themeButtons.forEach(btn => {
+        const textSpan = btn.querySelector('span');
+        if (textSpan) {
+            textSpan.textContent = theme === 'light' ? '🌙' : '☀️';
+        }
+    });
+    
+    console.log('✅ Theme geändert zu:', theme);
+}
+
+function toggleTheme() {
+    const currentTheme = document.body.getAttribute('data-theme') || 'dark';
+    const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+    setTheme(newTheme);
+    showNotification(`Theme zu ${newTheme === 'light' ? '☀️ Light' : '🌙 Dark'} geändert`, 'success');
+}
+
+// In der initChat() Funktion hinzufügen:
+async function initChat() {
+    if (chatInitialized) return;
+    chatInitialized = true;
+
+    // Theme initialisieren
+    initTheme();
+    
+    // Rest der Initialisierung...
+}
+
 // Enhanced Send Button UI
 function enhanceSendButton() {
     if (!sendBtn) return;

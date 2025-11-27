@@ -1,4 +1,4 @@
-// Enhanced Auth System - OHNE DEMO ACCOUNT
+// Enhanced Auth System - COMPLETELY FIXED USER CREATION
 const loginBtn = document.getElementById('login-btn');
 const registerBtn = document.getElementById('register-btn');
 const loginEmail = document.getElementById('login-email');
@@ -42,18 +42,51 @@ function showLoading(button) {
     };
 }
 
+// FIXED: Enhanced user creation in database
+async function createUserInDatabase(user, displayName) {
+    try {
+        console.log('🔄 Erstelle/Update User in Database:', user.email);
+        
+        const userData = {
+            email: user.email,
+            displayName: displayName || user.email,
+            createdAt: Date.now(),
+            lastLogin: Date.now(),
+            status: 'online',
+            avatar: null,
+            messageCount: 0,
+            roomsCreated: 0,
+            reactionsReceived: 0
+        };
+
+        // Setze User in Database - mit komplettem Overwrite um sicherzustellen
+        await db.ref('users/' + user.uid).set(userData);
+        console.log('✅ User erfolgreich in Database erstellt/aktualisiert:', user.email);
+        
+        return true;
+    } catch (error) {
+        console.error('❌ KRITISCHER FEHLER beim Erstellen des Users in Database:', error);
+        return false;
+    }
+}
+
+// FIXED: Enhanced login function
 loginBtn?.addEventListener('click', async () => {
     const resetButton = showLoading(loginBtn);
     
     try { 
+        console.log('🚀 Versuche Login...');
         const userCredential = await auth.signInWithEmailAndPassword(loginEmail.value, loginPassword.value);
         const user = userCredential.user;
         
-        // User Daten in Firebase aktualisieren
-        await db.ref('users/' + user.uid).update({
-            lastLogin: Date.now(),
-            status: 'online'
-        });
+        console.log('✅ Login erfolgreich, erstelle User in Database...');
+        
+        // User in Firebase Database erstellen/updaten
+        const dbSuccess = await createUserInDatabase(user, user.displayName);
+        
+        if (!dbSuccess) {
+            throw new Error('Fehler beim Synchronisieren mit der Datenbank');
+        }
         
         showSuccess('🚀 Login erfolgreich!');
         setTimeout(() => {
@@ -61,6 +94,7 @@ loginBtn?.addEventListener('click', async () => {
         }, 1000);
         
     } catch(error){ 
+        console.error('❌ Login Fehler:', error);
         let errorMessage = 'Login fehlgeschlagen! ';
         
         switch(error.code) {
@@ -85,6 +119,7 @@ loginBtn?.addEventListener('click', async () => {
     }
 });
 
+// FIXED: Enhanced register function
 registerBtn?.addEventListener('click', async () => {
     const resetButton = showLoading(registerBtn);
     
@@ -101,25 +136,30 @@ registerBtn?.addEventListener('click', async () => {
     }
     
     try { 
+        console.log('🚀 Versuche Registrierung...');
         const userCredential = await auth.createUserWithEmailAndPassword(registerEmail.value, registerPassword.value);
         const user = userCredential.user;
         
+        console.log('✅ Registrierung erfolgreich, erstelle User...');
+        
         // Display Name setzen falls angegeben
+        let displayName = registerDisplayname.value || user.email;
         if (registerDisplayname.value) {
             await user.updateProfile({
                 displayName: registerDisplayname.value
             });
+            displayName = registerDisplayname.value;
         }
         
-        // User in Firebase Database speichern
-        await db.ref('users/' + user.uid).set({
-            email: user.email,
-            displayName: registerDisplayname.value || user.email,
-            createdAt: Date.now(),
-            lastLogin: Date.now(),
-            status: 'online',
-            avatar: null
-        });
+        // User in Firebase Database erstellen
+        console.log('📝 Erstelle User in Database...');
+        const dbSuccess = await createUserInDatabase(user, displayName);
+        
+        if (!dbSuccess) {
+            // Fallback: User löschen wenn Database fehlschlägt
+            await user.delete();
+            throw new Error('Fehler beim Erstellen des Benutzerkontos');
+        }
         
         showSuccess('🎉 Account erfolgreich erstellt!');
         setTimeout(() => {
@@ -127,6 +167,7 @@ registerBtn?.addEventListener('click', async () => {
         }, 1500);
         
     } catch(error){ 
+        console.error('❌ Registrierungs Fehler:', error);
         let errorMessage = 'Registrierung fehlgeschlagen! ';
         
         switch(error.code) {
@@ -164,7 +205,23 @@ registerBtn?.addEventListener('click', async () => {
     });
 });
 
-// Passwort Sichtbarkeit Toggle
+// Initialize when page loads
+document.addEventListener('DOMContentLoaded', () => {
+    initPasswordToggle();
+    
+    // Prüfen ob User bereits eingeloggt ist
+    auth.onAuthStateChanged((user) => {
+        if (user) {
+            console.log('👤 User bereits eingeloggt:', user.email);
+            // Automatisch zum Dashboard weiterleiten wenn bereits eingeloggt
+            setTimeout(() => {
+                window.location.href = 'dashboard.html';
+            }, 1000);
+        }
+    });
+});
+
+// Password Toggle Function
 function initPasswordToggle() {
     const passwordInputs = document.querySelectorAll('input[type="password"]');
     
@@ -200,18 +257,3 @@ function initPasswordToggle() {
         });
     });
 }
-
-// Initialize when page loads
-document.addEventListener('DOMContentLoaded', () => {
-    initPasswordToggle();
-    
-    // Prüfen ob User bereits eingeloggt ist
-    auth.onAuthStateChanged((user) => {
-        if (user) {
-            // Automatisch zum Dashboard weiterleiten wenn bereits eingeloggt
-            setTimeout(() => {
-                window.location.href = 'dashboard.html';
-            }, 1000);
-        }
-    });
-});
