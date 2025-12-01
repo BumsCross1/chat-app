@@ -693,7 +693,234 @@ function createRoomInFirebase(name, description, password) {
         });
 }
 
-// Enhanced Rooms Loading
+// dashboard.js - RAUMVERWALTUNG ERGÄNZEN
+function showRoomManagement(roomId = null) {
+    console.log('🔧 Zeige Raumverwaltung für:', roomId);
+    
+    if (!roomId) {
+        const currentRoomId = localStorage.getItem('roomId');
+        if (currentRoomId) {
+            roomId = currentRoomId;
+        } else {
+            showNotification('❌ Kein Raum ausgewählt', 'error');
+            return;
+        }
+    }
+    
+    // Hole Raumdaten
+    db.ref(`rooms/${roomId}`).once('value')
+        .then(roomSnapshot => {
+            const room = roomSnapshot.val();
+            if (!room) {
+                showNotification('❌ Raum nicht gefunden', 'error');
+                return;
+            }
+            
+            // Prüfe ob User Besitzer ist
+            if (room.ownerId !== auth.currentUser.uid) {
+                showNotification('❌ Nur der Raum-Besitzer kann diesen Raum verwalten', 'error');
+                return;
+            }
+            
+            // Zeige Management Modal
+            showRoomManagementModal(room);
+        })
+        .catch(error => {
+            console.error('Fehler beim Laden der Raumdaten:', error);
+            showNotification('❌ Fehler beim Laden', 'error');
+        });
+}
+
+function showRoomManagementModal(room) {
+    // Erstelle oder finde Modal
+    let modal = document.getElementById('room-management-modal');
+    
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'room-management-modal';
+        modal.className = 'modal';
+        document.body.appendChild(modal);
+    }
+    
+    // Hole aktuelle Mitglieder
+    db.ref(`rooms/${room.id}/members`).once('value')
+        .then(membersSnapshot => {
+            const members = membersSnapshot.val() || {};
+            const membersList = Object.entries(members).map(([uid, data]) => ({ uid, ...data }));
+            
+            modal.innerHTML = `
+                <div class="modal-content" style="max-width: 600px;">
+                    <h2>🔧 Raumverwaltung: ${escapeHtml(room.name)}</h2>
+                    
+                    <div class="management-section">
+                        <h3>👥 Mitglieder (${membersList.length})</h3>
+                        <div class="members-list" id="room-members-list">
+                            ${membersList.map(member => `
+                                <div class="member-item" data-uid="${member.uid}">
+                                    <span class="member-name">${member.displayName || 'Unbekannt'}</span>
+                                    <span class="member-role">${member.role || 'Mitglied'}</span>
+                                    <div class="member-actions">
+                                        <button class="action-btn" onclick="kickUser('${room.id}', '${member.uid}')">🚫 Rauswerfen</button>
+                                        <button class="action-btn" onclick="banUser('${room.id}', '${member.uid}')">⛔ Bannen</button>
+                                        ${member.role !== 'moderator' ? 
+                                            `<button class="action-btn" onclick="promoteToModerator('${room.id}', '${member.uid}')">👑 Zum Moderator ernennen</button>` : 
+                                            `<button class="action-btn" onclick="demoteFromModerator('${room.id}', '${member.uid}')">👤 Moderator entfernen</button>`
+                                        }
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                    
+                    <div class="management-section">
+                        <h3>⚙️ Raumeinstellungen</h3>
+                        <div class="settings-grid">
+                            <label class="checkbox-group">
+                                <input type="checkbox" id="allow-images" ${room.settings?.allowImages ? 'checked' : ''}>
+                                <span>🖼️ Bilder erlauben</span>
+                            </label>
+                            <label class="checkbox-group">
+                                <input type="checkbox" id="allow-files" ${room.settings?.allowFiles ? 'checked' : ''}>
+                                <span>📎 Dateien erlauben</span>
+                            </label>
+                            <label class="checkbox-group">
+                                <input type="checkbox" id="allow-voice" ${room.settings?.allowVoice ? 'checked' : ''}>
+                                <span>🎤 Sprachnachrichten erlauben</span>
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="management-section danger-zone">
+                        <h3 style="color: var(--error);">⚠️ Gefahrenzone</h3>
+                        <div class="danger-actions">
+                            <button class="danger-btn" onclick="deleteRoom('${room.id}')">🗑️ Raum löschen</button>
+                            <button class="danger-btn" onclick="clearRoomMessages('${room.id}')">🗑️ Alle Nachrichten löschen</button>
+                            <button class="danger-btn" onclick="resetRoomPassword('${room.id}')">🔑 Passwort zurücksetzen</button>
+                        </div>
+                    </div>
+                    
+                    <div class="modal-actions">
+                        <button class="modern-btn secondary-btn" onclick="closeModal('room-management-modal')">Schließen</button>
+                        <button class="modern-btn" onclick="saveRoomSettings('${room.id}')">💾 Einstellungen speichern</button>
+                    </div>
+                </div>
+            `;
+            
+            modal.classList.remove('hidden');
+        });
+}
+
+// Verwaltungsfunktionen
+function kickUser(roomId, userId) {
+    if (confirm(`Willst du diesen User wirklich aus dem Raum werfen?`)) {
+        db.ref(`rooms/${roomId}/members/${userId}`).remove()
+            .then(() => {
+                showNotification('👢 User wurde aus dem Raum geworfen', 'success');
+                // Member Count anpassen
+                db.ref(`rooms/${roomId}/memberCount`).transaction((current) => Math.max(0, (current || 1) - 1));
+            })
+            .catch(error => {
+                console.error('Fehler beim Kicken:', error);
+                showNotification('❌ Fehler beim Kicken', 'error');
+            });
+    }
+}
+
+function banUser(roomId, userId) {
+    if (confirm(`Willst du diesen User wirklich aus dem Raum bannen?`)) {
+        // Zu gebannten Usern hinzufügen
+        db.ref(`rooms/${roomId}/banned/${userId}`).set({
+            bannedAt: Date.now(),
+            bannedBy: auth.currentUser.uid
+        })
+        .then(() => kickUser(roomId, userId))
+        .then(() => {
+            showNotification('⛔ User wurde gebannt', 'success');
+        })
+        .catch(error => {
+            console.error('Fehler beim Bannen:', error);
+            showNotification('❌ Fehler beim Bannen', 'error');
+        });
+    }
+}
+
+function promoteToModerator(roomId, userId) {
+    db.ref(`rooms/${roomId}/members/${userId}/role`).set('moderator')
+        .then(() => {
+            showNotification('👑 User zum Moderator ernannt', 'success');
+        })
+        .catch(error => {
+            console.error('Fehler beim Befördern:', error);
+            showNotification('❌ Fehler beim Befördern', 'error');
+        });
+}
+
+function demoteFromModerator(roomId, userId) {
+    db.ref(`rooms/${roomId}/members/${userId}/role`).set('member')
+        .then(() => {
+            showNotification('👤 User ist jetzt nur noch Mitglied', 'success');
+        })
+        .catch(error => {
+            console.error('Fehler beim Zurückstufen:', error);
+            showNotification('❌ Fehler beim Zurückstufen', 'error');
+        });
+}
+
+function deleteRoom(roomId) {
+    if (confirm('⚠️ Willst du diesen Raum wirklich LÖSCHEN?\n\nDiese Aktion kann NICHT rückgängig gemacht werden!')) {
+        // 1. Alle Nachrichten des Raums löschen
+        db.ref(`messages/${roomId}`).remove()
+            .then(() => {
+                // 2. Raum selbst löschen
+                return db.ref(`rooms/${roomId}`).remove();
+            })
+            .then(() => {
+                showNotification('🗑️ Raum erfolgreich gelöscht', 'success');
+                closeModal('room-management-modal');
+                loadRooms(); // Liste aktualisieren
+                
+                // Wenn wir im gelöschten Raum waren, zum Dashboard zurück
+                const currentRoomId = localStorage.getItem('roomId');
+                if (currentRoomId === roomId) {
+                    localStorage.removeItem('roomId');
+                    localStorage.removeItem('roomName');
+                    window.location.href = 'dashboard.html';
+                }
+            })
+            .catch(error => {
+                console.error('Fehler beim Löschen des Raums:', error);
+                showNotification('❌ Fehler beim Löschen', 'error');
+            });
+    }
+}
+
+function saveRoomSettings(roomId) {
+    const settings = {
+        allowImages: document.getElementById('allow-images').checked,
+        allowFiles: document.getElementById('allow-files').checked,
+        allowVoice: document.getElementById('allow-voice').checked,
+        maxFileSize: 10
+    };
+    
+    db.ref(`rooms/${roomId}/settings`).set(settings)
+        .then(() => {
+            showNotification('✅ Raumeinstellungen gespeichert', 'success');
+        })
+        .catch(error => {
+            console.error('Fehler beim Speichern:', error);
+            showNotification('❌ Fehler beim Speichern', 'error');
+        });
+}
+
+function closeModal(modalId) {
+    const modal = document.getElementById(modalId);
+    if (modal) {
+        modal.classList.add('hidden');
+    }
+}
+
+
+// dashboard.js - FIX für private Chats
 function loadRooms() {
     if (!roomsList) {
         console.error('❌ roomsList element nicht gefunden');
@@ -702,15 +929,28 @@ function loadRooms() {
     
     roomsList.innerHTML = '<div class="loading">🏠 Lade Räume...</div>';
     
+    const currentUser = auth.currentUser;
+    if (!currentUser) return;
+    
     db.ref('rooms').on('value', (snap) => {
         const data = snap.val() || {};
-        allRooms = Object.values(data);
+        const allRooms = Object.values(data);
         
-        console.log('📥 Geladene Räume:', allRooms.length);
+        console.log('📥 Geladene Räume (alle):', allRooms.length);
+        
+        // Filtere private Räume, wo User nicht Mitglied ist
+        const visibleRooms = allRooms.filter(room => {
+            if (!room.isPrivate) return true; // Öffentliche Räume immer anzeigen
+            if (room.ownerId === currentUser.uid) return true; // Eigene private Räume
+            if (room.members && room.members[currentUser.uid]) return true; // Mitglied in privatem Raum
+            return false; // Private Räume ohne Zugriff ausblenden
+        });
+        
+        console.log('👁️ Sichtbare Räume:', visibleRooms.length);
         
         roomsList.innerHTML = '';
         
-        if (allRooms.length === 0) {
+        if (visibleRooms.length === 0) {
             roomsList.innerHTML = `
                 <div class="no-rooms">
                     <h3>🌌 Noch keine Räume vorhanden</h3>
@@ -724,7 +964,7 @@ function loadRooms() {
         }
         
         // Räume sortieren (neueste zuerst)
-        const sortedRooms = allRooms.sort((a, b) => b.createdAt - a.createdAt);
+        const sortedRooms = visibleRooms.sort((a, b) => b.createdAt - a.createdAt);
         
         sortedRooms.forEach(room => {
             const roomCard = createRoomCard(room);
@@ -735,7 +975,7 @@ function loadRooms() {
         if (roomSearchInput) {
             roomSearchInput.addEventListener('input', (e) => {
                 const searchTerm = e.target.value.toLowerCase();
-                const filteredRooms = allRooms.filter(room => 
+                const filteredRooms = visibleRooms.filter(room => 
                     room.name.toLowerCase().includes(searchTerm) ||
                     room.description?.toLowerCase().includes(searchTerm)
                 );

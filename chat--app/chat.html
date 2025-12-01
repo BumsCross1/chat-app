@@ -36,7 +36,88 @@
   </div>
   
   <div id="messages" class="messages"></div>
+
   
+  <div class="online-users-sidebar">
+    <div class="online-users-header">
+        <h4>👥 Online im Raum</h4>
+        <span id="online-count">0 online</span>
+    </div>
+    <div class="online-users-list" id="online-users-list">
+        <div class="loading">Lade User...</div>
+    </div>
+</div>
+
+<style>
+.online-users-sidebar {
+    position: fixed;
+    right: 20px;
+    top: 100px;
+    width: 250px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 15px;
+    padding: 15px;
+    backdrop-filter: blur(20px);
+    z-index: 90;
+}
+
+.online-users-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--border);
+}
+
+.online-users-list {
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.online-user-item {
+    display: flex;
+    align-items: center;
+    padding: 8px 12px;
+    border-radius: 8px;
+    margin-bottom: 8px;
+    background: var(--bg-input);
+    transition: all 0.3s ease;
+}
+
+.online-user-item:hover {
+    background: var(--primary);
+    transform: translateX(5px);
+}
+
+.online-indicator {
+    margin-right: 10px;
+    animation: pulse 2s infinite;
+}
+
+.online-user-name {
+    flex: 1;
+    font-weight: 600;
+}
+
+.profile-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+}
+
+.profile-btn:hover {
+    transform: scale(1.2);
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+</style>  
 <!-- Fixed Chat Input -->
 <div class="chat-input-container">
   <input 

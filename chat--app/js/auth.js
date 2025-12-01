@@ -1,100 +1,134 @@
-// Enhanced Auth System - COMPLETELY FIXED USER CREATION
-const loginBtn = document.getElementById('login-btn');
-const registerBtn = document.getElementById('register-btn');
-const loginEmail = document.getElementById('login-email');
-const loginPassword = document.getElementById('login-password');
-const registerEmail = document.getElementById('register-email');
-const registerPassword = document.getElementById('register-password');
-const registerDisplayname = document.getElementById('register-displayname');
-const errorMsg = document.getElementById('error-msg');
-
-function showError(message) {
-    if (!errorMsg) return;
-    
-    errorMsg.textContent = message;
-    errorMsg.className = 'error-message';
-    errorMsg.style.display = 'block';
-    
-    setTimeout(() => {
-        errorMsg.style.display = 'none';
-    }, 5000);
+// Warte auf Firebase Initialisierung
+function waitForFirebase() {
+    return new Promise((resolve) => {
+        const checkInterval = setInterval(() => {
+            if (typeof firebase !== 'undefined' && 
+                firebase.auth && 
+                firebase.database && 
+                window.db) {
+                console.log('✅ Firebase vollständig geladen');
+                clearInterval(checkInterval);
+                resolve();
+            }
+        }, 100);
+    });
 }
 
-function showSuccess(message) {
-    if (!errorMsg) return;
+// DOM Elemente
+let loginBtn, registerBtn, loginEmail, loginPassword;
+let registerEmail, registerPassword, registerDisplayname, errorMsg;
+
+// Initialize Auth System
+async function initAuth() {
+    console.log('🔧 Initialisiere Auth System...');
     
-    errorMsg.textContent = message;
-    errorMsg.className = 'success-message';
-    errorMsg.style.display = 'block';
+    // Warte auf Firebase
+    await waitForFirebase();
     
-    setTimeout(() => {
-        errorMsg.style.display = 'none';
-    }, 3000);
+    // Elemente finden
+    loginBtn = document.getElementById('login-btn');
+    registerBtn = document.getElementById('register-btn');
+    loginEmail = document.getElementById('login-email');
+    loginPassword = document.getElementById('login-password');
+    registerEmail = document.getElementById('register-email');
+    registerPassword = document.getElementById('register-password');
+    registerDisplayname = document.getElementById('register-displayname');
+    errorMsg = document.getElementById('error-msg');
+    
+    console.log('🔍 Gefundene Elemente:', {
+        loginBtn: !!loginBtn,
+        registerBtn: !!registerBtn,
+        loginEmail: !!loginEmail,
+        loginPassword: !!loginPassword,
+        registerEmail: !!registerEmail,
+        registerPassword: !!registerPassword,
+        registerDisplayname: !!registerDisplayname
+    });
+    
+    // Event Listener setzen
+    setupEventListeners();
+    
+    // Prüfe ob User bereits eingeloggt ist
+    checkExistingUser();
+    
+    console.log('✅ Auth System initialisiert');
 }
 
-function showLoading(button) {
-    const originalText = button.textContent;
-    button.innerHTML = '<div class="spinner"></div> Wird geladen...';
-    button.disabled = true;
-    return () => {
-        button.textContent = originalText;
-        button.disabled = false;
-    };
-}
-
-// FIXED: Enhanced user creation in database
-async function createUserInDatabase(user, displayName) {
-    try {
-        console.log('🔄 Erstelle/Update User in Database:', user.email);
-        
-        const userData = {
-            email: user.email,
-            displayName: displayName || user.email,
-            createdAt: Date.now(),
-            lastLogin: Date.now(),
-            status: 'online',
-            avatar: null,
-            messageCount: 0,
-            roomsCreated: 0,
-            reactionsReceived: 0
-        };
-
-        // Setze User in Database - mit komplettem Overwrite um sicherzustellen
-        await db.ref('users/' + user.uid).set(userData);
-        console.log('✅ User erfolgreich in Database erstellt/aktualisiert:', user.email);
-        
-        return true;
-    } catch (error) {
-        console.error('❌ KRITISCHER FEHLER beim Erstellen des Users in Database:', error);
-        return false;
+// Event Listeners
+function setupEventListeners() {
+    // Login Button
+    if (loginBtn) {
+        console.log('➕ Login Button Event Listener');
+        loginBtn.addEventListener('click', handleLogin);
+    } else {
+        console.error('❌ Login Button nicht gefunden');
     }
+    
+    // Register Button
+    if (registerBtn) {
+        console.log('➕ Register Button Event Listener');
+        registerBtn.addEventListener('click', handleRegister);
+    } else {
+        console.error('❌ Register Button nicht gefunden');
+    }
+    
+    // Enter Taste Support
+    setupEnterKeySupport();
+    
+    // Password Toggle
+    initPasswordToggle();
 }
 
-// FIXED: Enhanced login function
-loginBtn?.addEventListener('click', async () => {
-    const resetButton = showLoading(loginBtn);
+// Login Handler
+async function handleLogin() {
+    console.log('🚀 Login gestartet...');
     
-    try { 
-        console.log('🚀 Versuche Login...');
-        const userCredential = await auth.signInWithEmailAndPassword(loginEmail.value, loginPassword.value);
+    if (!loginEmail || !loginPassword) {
+        showError('❌ Login-Felder nicht gefunden');
+        return;
+    }
+    
+    const email = loginEmail.value.trim();
+    const password = loginPassword.value;
+    
+    // Validierung
+    if (!email) {
+        showError('Bitte Email eingeben');
+        return;
+    }
+    
+    if (!password) {
+        showError('Bitte Passwort eingeben');
+        return;
+    }
+    
+    // UI Feedback
+    const originalText = loginBtn.textContent;
+    loginBtn.innerHTML = '<div class="spinner"></div> Wird geladen...';
+    loginBtn.disabled = true;
+    
+    try {
+        console.log('📤 Login versuch:', email);
+        
+        // Firebase Login
+        const userCredential = await firebase.auth().signInWithEmailAndPassword(email, password);
         const user = userCredential.user;
         
-        console.log('✅ Login erfolgreich, erstelle User in Database...');
+        console.log('✅ Login erfolgreich:', user.email);
         
-        // User in Firebase Database erstellen/updaten
-        const dbSuccess = await createUserInDatabase(user, user.displayName);
-        
-        if (!dbSuccess) {
-            throw new Error('Fehler beim Synchronisieren mit der Datenbank');
-        }
+        // User in Database erstellen/updaten
+        await createOrUpdateUserInDatabase(user);
         
         showSuccess('🚀 Login erfolgreich!');
+        
+        // Weiterleitung nach kurzer Verzögerung
         setTimeout(() => {
             window.location.href = 'dashboard.html';
         }, 1000);
         
-    } catch(error){ 
+    } catch(error) {
         console.error('❌ Login Fehler:', error);
+        
         let errorMessage = 'Login fehlgeschlagen! ';
         
         switch(error.code) {
@@ -110,64 +144,89 @@ loginBtn?.addEventListener('click', async () => {
             case 'auth/wrong-password':
                 errorMessage += 'Falsches Passwort.';
                 break;
+            case 'auth/too-many-requests':
+                errorMessage += 'Zu viele fehlgeschlagene Versuche. Bitte später erneut versuchen.';
+                break;
             default:
                 errorMessage += error.message;
         }
         
         showError(errorMessage);
-        resetButton();
+        
+        // Button zurücksetzen
+        loginBtn.textContent = originalText;
+        loginBtn.disabled = false;
     }
-});
+}
 
-// FIXED: Enhanced register function
-registerBtn?.addEventListener('click', async () => {
-    const resetButton = showLoading(registerBtn);
+// Register Handler
+async function handleRegister() {
+    console.log('🚀 Registrierung gestartet...');
     
-    if (registerPassword.value.length < 6) {
-        showError('Passwort muss mindestens 6 Zeichen lang sein!');
-        resetButton();
+    if (!registerEmail || !registerPassword || !registerDisplayname) {
+        showError('❌ Registrierungs-Felder nicht gefunden');
         return;
     }
     
-    if (!registerEmail.value) {
-        showError('Bitte Email-Adresse eingeben!');
-        resetButton();
+    const email = registerEmail.value.trim();
+    const password = registerPassword.value;
+    const displayName = registerDisplayname.value.trim();
+    
+    // Validierung
+    if (!email) {
+        showError('Bitte Email eingeben');
         return;
     }
     
-    try { 
-        console.log('🚀 Versuche Registrierung...');
-        const userCredential = await auth.createUserWithEmailAndPassword(registerEmail.value, registerPassword.value);
+    if (!password) {
+        showError('Bitte Passwort eingeben');
+        return;
+    }
+    
+    if (password.length < 6) {
+        showError('Passwort muss mindestens 6 Zeichen lang sein');
+        return;
+    }
+    
+    if (!displayName) {
+        showError('Bitte Anzeigenamen eingeben');
+        return;
+    }
+    
+    // UI Feedback
+    const originalText = registerBtn.textContent;
+    registerBtn.innerHTML = '<div class="spinner"></div> Wird erstellt...';
+    registerBtn.disabled = true;
+    
+    try {
+        console.log('📤 Registrierungs versuch:', email);
+        
+        // 1. Firebase Account erstellen
+        const userCredential = await firebase.auth().createUserWithEmailAndPassword(email, password);
         const user = userCredential.user;
         
-        console.log('✅ Registrierung erfolgreich, erstelle User...');
+        console.log('✅ Firebase Account erstellt:', user.uid);
         
-        // Display Name setzen falls angegeben
-        let displayName = registerDisplayname.value || user.email;
-        if (registerDisplayname.value) {
-            await user.updateProfile({
-                displayName: registerDisplayname.value
-            });
-            displayName = registerDisplayname.value;
-        }
+        // 2. Display Name setzen
+        await user.updateProfile({
+            displayName: displayName
+        });
         
-        // User in Firebase Database erstellen
-        console.log('📝 Erstelle User in Database...');
-        const dbSuccess = await createUserInDatabase(user, displayName);
+        console.log('✅ Display Name gesetzt:', displayName);
         
-        if (!dbSuccess) {
-            // Fallback: User löschen wenn Database fehlschlägt
-            await user.delete();
-            throw new Error('Fehler beim Erstellen des Benutzerkontos');
-        }
+        // 3. User in Database erstellen
+        await createOrUpdateUserInDatabase(user, displayName);
         
         showSuccess('🎉 Account erfolgreich erstellt!');
+        
+        // Weiterleitung nach kurzer Verzögerung
         setTimeout(() => {
             window.location.href = 'dashboard.html';
         }, 1500);
         
-    } catch(error){ 
+    } catch(error) {
         console.error('❌ Registrierungs Fehler:', error);
+        
         let errorMessage = 'Registrierung fehlgeschlagen! ';
         
         switch(error.code) {
@@ -183,77 +242,223 @@ registerBtn?.addEventListener('click', async () => {
             case 'auth/weak-password':
                 errorMessage += 'Passwort ist zu schwach.';
                 break;
+            case 'auth/network-request-failed':
+                errorMessage += 'Netzwerkfehler. Bitte Internetverbindung prüfen.';
+                break;
             default:
                 errorMessage += error.message;
         }
         
         showError(errorMessage);
-        resetButton();
+        
+        // Button zurücksetzen
+        registerBtn.textContent = originalText;
+        registerBtn.disabled = false;
     }
-});
+}
 
-// Enter Taste Support
-[loginEmail, loginPassword, registerEmail, registerPassword, registerDisplayname].forEach(input => {
-    input?.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') {
-            if (input.id.includes('login')) {
-                loginBtn.click();
-            } else {
-                registerBtn.click();
-            }
-        }
-    });
-});
-
-// Initialize when page loads
-document.addEventListener('DOMContentLoaded', () => {
-    initPasswordToggle();
+// User in Firebase Database erstellen/updaten
+async function createOrUpdateUserInDatabase(user, customDisplayName = null) {
+    console.log('💾 Speichere User in Database:', user.email);
     
-    // Prüfen ob User bereits eingeloggt ist
-    auth.onAuthStateChanged((user) => {
+    try {
+        const userData = {
+            email: user.email,
+            displayName: customDisplayName || user.displayName || user.email,
+            createdAt: Date.now(),
+            lastLogin: Date.now(),
+            lastUpdated: Date.now(),
+            status: 'online',
+            avatar: null,
+            messageCount: 0,
+            roomsCreated: 0,
+            reactionsReceived: 0,
+            friendsCount: 0
+        };
+        
+        // Schreibe in Firebase Database
+        await firebase.database().ref('users/' + user.uid).set(userData);
+        
+        console.log('✅ User in Database gespeichert');
+        return true;
+        
+    } catch (error) {
+        console.error('❌ Fehler beim Speichern in Database:', error);
+        
+        // Versuche Alternative falls db nicht verfügbar
+        try {
+            // Alternative: Local Storage als Backup
+            localStorage.setItem(`user_${user.uid}`, JSON.stringify({
+                email: user.email,
+                displayName: customDisplayName || user.displayName || user.email,
+                createdAt: Date.now()
+            }));
+            console.log('⚠️ User in LocalStorage gespeichert (Fallback)');
+            return true;
+        } catch (e) {
+            console.error('❌ Auch LocalStorage Fehler:', e);
+            return false;
+        }
+    }
+}
+
+// Check if user is already logged in
+function checkExistingUser() {
+    firebase.auth().onAuthStateChanged((user) => {
         if (user) {
             console.log('👤 User bereits eingeloggt:', user.email);
+            
             // Automatisch zum Dashboard weiterleiten wenn bereits eingeloggt
             setTimeout(() => {
-                window.location.href = 'dashboard.html';
+                if (window.location.pathname.includes('index.html')) {
+                    window.location.href = 'dashboard.html';
+                }
             }, 1000);
+        } else {
+            console.log('👋 Kein User eingeloggt');
         }
     });
-});
+}
 
-// Password Toggle Function
+// Error/Message Handling
+function showError(message) {
+    console.error('❌ Fehler:', message);
+    
+    if (errorMsg) {
+        errorMsg.textContent = message;
+        errorMsg.className = 'error-message';
+        errorMsg.style.display = 'block';
+        
+        setTimeout(() => {
+            errorMsg.style.display = 'none';
+        }, 5000);
+    } else {
+        // Fallback: Alert
+        alert(message);
+    }
+}
+
+function showSuccess(message) {
+    console.log('✅ Erfolg:', message);
+    
+    if (errorMsg) {
+        errorMsg.textContent = message;
+        errorMsg.className = 'success-message';
+        errorMsg.style.display = 'block';
+        
+        setTimeout(() => {
+            errorMsg.style.display = 'none';
+        }, 3000);
+    }
+}
+
+// Enter Key Support
+function setupEnterKeySupport() {
+    const inputs = [
+        loginEmail, loginPassword, 
+        registerEmail, registerPassword, registerDisplayname
+    ];
+    
+    inputs.forEach(input => {
+        if (input) {
+            input.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    
+                    if (input.id.includes('login')) {
+                        if (loginBtn) loginBtn.click();
+                    } else {
+                        if (registerBtn) registerBtn.click();
+                    }
+                }
+            });
+        }
+    });
+}
+
+// Password Toggle
 function initPasswordToggle() {
     const passwordInputs = document.querySelectorAll('input[type="password"]');
     
     passwordInputs.forEach(input => {
-        const toggle = document.createElement('button');
-        toggle.type = 'button';
-        toggle.innerHTML = '👁️';
-        toggle.style.cssText = `
-            position: absolute;
-            right: 10px;
-            top: 50%;
-            transform: translateY(-50%);
-            background: none;
-            border: none;
-            cursor: pointer;
-            font-size: 1.1rem;
-        `;
-        
-        const wrapper = document.createElement('div');
-        wrapper.style.position = 'relative';
-        input.parentNode.insertBefore(wrapper, input);
-        wrapper.appendChild(input);
-        wrapper.appendChild(toggle);
-        
-        toggle.addEventListener('click', () => {
-            if (input.type === 'password') {
-                input.type = 'text';
-                toggle.innerHTML = '🔒';
-            } else {
-                input.type = 'password';
-                toggle.innerHTML = '👁️';
-            }
-        });
+        if (!input.parentElement.classList.contains('password-toggle-wrapper')) {
+            const wrapper = document.createElement('div');
+            wrapper.className = 'password-toggle-wrapper';
+            wrapper.style.position = 'relative';
+            
+            const toggle = document.createElement('button');
+            toggle.type = 'button';
+            toggle.innerHTML = '👁️';
+            toggle.className = 'password-toggle-btn';
+            
+            toggle.style.cssText = `
+                position: absolute;
+                right: 12px;
+                top: 50%;
+                transform: translateY(-50%);
+                background: none;
+                border: none;
+                cursor: pointer;
+                font-size: 1.1rem;
+                padding: 4px;
+                z-index: 10;
+            `;
+            
+            // Wrap input with toggle button
+            input.parentNode.insertBefore(wrapper, input);
+            wrapper.appendChild(input);
+            wrapper.appendChild(toggle);
+            
+            toggle.addEventListener('click', () => {
+                if (input.type === 'password') {
+                    input.type = 'text';
+                    toggle.innerHTML = '🔒';
+                } else {
+                    input.type = 'password';
+                    toggle.innerHTML = '👁️';
+                }
+            });
+        }
     });
 }
+
+// Tab Switching
+function showTab(tabName) {
+    console.log('📱 Wechsel zu Tab:', tabName);
+    
+    // Tabs aktivieren/deaktivieren
+    document.querySelectorAll('.tab').forEach(tab => {
+        tab.classList.remove('active');
+    });
+    
+    // Tab Content anzeigen/verstecken
+    document.querySelectorAll('.tab-content').forEach(content => {
+        content.classList.add('hidden');
+    });
+    
+    // Aktiven Tab setzen
+    const activeTab = document.querySelector(`.tab:nth-child(${tabName === 'login' ? 1 : 2})`);
+    if (activeTab) {
+        activeTab.classList.add('active');
+    }
+    
+    // Content anzeigen
+    const activeContent = document.getElementById(`${tabName}-tab`);
+    if (activeContent) {
+        activeContent.classList.remove('hidden');
+    }
+}
+
+// Initialize when DOM is loaded
+document.addEventListener('DOMContentLoaded', () => {
+    console.log('📋 DOM geladen, starte Auth Initialisierung...');
+    
+    // Setze Tab Funktion global
+    window.showTab = showTab;
+    
+    // Starte Auth System
+    initAuth().catch(error => {
+        console.error('❌ Kritischer Fehler bei Auth Initialisierung:', error);
+        showError('Systemfehler: ' + error.message);
+    });
+});

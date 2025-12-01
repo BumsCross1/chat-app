@@ -1,4 +1,4 @@
-// Firebase Konfiguration - FIXED VERSION
+// Firebase Konfiguration
 const firebaseConfig = {
   apiKey: "AIzaSyADnEf86hwyA9zShMnl0FlGLuA4Y5YBMbA",
   authDomain: "admin-7d641.firebaseapp.com",
@@ -10,24 +10,40 @@ const firebaseConfig = {
   measurementId: "G-FM2YWSRFGD"
 };
 
-// Firebase Initialisierung - STORAGE ENTFERNT
-firebase.initializeApp(firebaseConfig);
-const auth = firebase.auth();
-const db = firebase.database();
-// storage entfernt - wir verwenden Base64 für Dateien
-
-// Firebase Auth State Listener
-auth.onAuthStateChanged((user) => {
-  if (user) {
-      console.log('🚀 User eingeloggt:', user.email);
-      // User Daten in Firebase speichern
-      db.ref('users/' + user.uid).set({
-          email: user.email,
-          displayName: user.displayName || user.email,
-          lastLogin: Date.now(),
-          avatar: user.photoURL || null
-      });
-  } else {
-      console.log('👋 User ausgeloggt');
+// Firebase Initialisierung
+try {
+  // Prüfe ob Firebase bereits initialisiert wurde
+  if (!firebase.apps.length) {
+      firebase.initializeApp(firebaseConfig);
   }
-});
+  
+  // Globale Instanzen
+  window.auth = firebase.auth();
+  window.db = firebase.database();
+  
+  console.log('✅ Firebase erfolgreich initialisiert');
+  
+  // Auto-Login Check
+  window.auth.onAuthStateChanged((user) => {
+      if (user) {
+          console.log('👤 Auto-Login User:', user.email);
+          // Optional: User in Database sicherstellen
+          if (window.db) {
+              window.db.ref('users/' + user.uid).once('value').then(snapshot => {
+                  if (!snapshot.exists()) {
+                      window.db.ref('users/' + user.uid).set({
+                          email: user.email,
+                          displayName: user.displayName || user.email,
+                          createdAt: Date.now(),
+                          lastLogin: Date.now(),
+                          status: 'online'
+                      });
+                  }
+              });
+          }
+      }
+  });
+  
+} catch (error) {
+  console.error('❌ Firebase Initialisierung fehlgeschlagen:', error);
+}
