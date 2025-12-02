@@ -53,6 +53,578 @@ async function saveUserAvatar(avatarData) {
     }
 }
 
+// User Profile Modal im Chat
+async function showUserProfile(userId) {
+    console.log('👤 Zeige Profil für:', userId);
+    
+    try {
+        // 1. User Daten laden
+        const userSnapshot = await db.ref(`users/${userId}`).once('value');
+        const userData = userSnapshot.val();
+        
+        if (!userData) {
+            showNotification('❌ Benutzer nicht gefunden', 'error');
+            return;
+        }
+        
+        // 2. Modal HTML erstellen
+        const modal = document.createElement('div');
+        modal.className = 'modal';
+        modal.style.display = 'flex';
+        modal.style.justifyContent = 'center';
+        modal.style.alignItems = 'center';
+        modal.style.position = 'fixed';
+        modal.style.top = '0';
+        modal.style.left = '0';
+        modal.style.width = '100%';
+        modal.style.height = '100%';
+        modal.style.backgroundColor = 'rgba(0,0,0,0.8)';
+        modal.style.zIndex = '2000';
+        modal.style.backdropFilter = 'blur(10px)';
+        
+        const avatarUrl = userData.avatar || generateDefaultAvatar(userData.displayName || 'User');
+        const isOnline = userData.status === 'online';
+        const isAdmin = userData.role === 'admin';
+        
+        modal.innerHTML = `
+            <div class="modal-content" style="
+                background: var(--bg-card);
+                border: 1px solid var(--border);
+                border-radius: 20px;
+                padding: 30px;
+                max-width: 500px;
+                width: 90%;
+                max-height: 80vh;
+                overflow-y: auto;
+                position: relative;
+            ">
+                <button class="close-btn" onclick="this.closest('.modal').remove()" style="
+                    position: absolute;
+                    top: 15px;
+                    right: 15px;
+                    background: none;
+                    border: none;
+                    font-size: 2rem;
+                    color: var(--text-muted);
+                    cursor: pointer;
+                ">×</button>
+                
+                <div style="text-align: center; margin-bottom: 20px;">
+                    <img src="${avatarUrl}" 
+                         alt="Avatar" 
+                         style="
+                             width: 120px;
+                             height: 120px;
+                             border-radius: 50%;
+                             border: 4px solid ${isOnline ? '#10b981' : '#64748b'};
+                             margin-bottom: 15px;
+                         "
+                         onerror="this.src='${generateDefaultAvatar(userData.displayName || 'User')}'">
+                    
+                    <h2 style="margin-bottom: 5px;">${escapeHtml(userData.displayName || 'Unbekannt')}</h2>
+                    <p style="color: var(--text-muted); margin-bottom: 15px;">${escapeHtml(userData.email || '')}</p>
+                    
+                    <div style="display: flex; gap: 10px; justify-content: center; margin-bottom: 20px;">
+                        <span style="
+                            background: ${isOnline ? '#10b98120' : '#64748b20'};
+                            color: ${isOnline ? '#10b981' : '#64748b'};
+                            padding: 5px 15px;
+                            border-radius: 20px;
+                            font-size: 0.9rem;
+                        ">
+                            ${isOnline ? '🟢 Online' : '⚫ Offline'}
+                        </span>
+                        
+                        ${isAdmin ? `
+                            <span style="
+                                background: #f59e0b20;
+                                color: #f59e0b;
+                                padding: 5px 15px;
+                                border-radius: 20px;
+                                font-size: 0.9rem;
+                            ">
+                                👑 Admin
+                            </span>
+                        ` : ''}
+                    </div>
+                </div>
+                
+                <div style="
+                    display: grid;
+                    grid-template-columns: repeat(2, 1fr);
+                    gap: 15px;
+                    margin: 25px 0;
+                ">
+                    <div style="
+                        background: var(--bg-input);
+                        padding: 20px;
+                        border-radius: 12px;
+                        text-align: center;
+                        border: 1px solid var(--border);
+                    ">
+                        <div style="
+                            font-size: 2rem;
+                            font-weight: bold;
+                            background: var(--cosmic-gradient);
+                            -webkit-background-clip: text;
+                            -webkit-text-fill-color: transparent;
+                            margin-bottom: 5px;
+                        ">
+                            ${userData.messageCount || 0}
+                        </div>
+                        <div style="color: var(--text-muted); font-size: 0.9rem;">Nachrichten</div>
+                    </div>
+                    
+                    <div style="
+                        background: var(--bg-input);
+                        padding: 20px;
+                        border-radius: 12px;
+                        text-align: center;
+                        border: 1px solid var(--border);
+                    ">
+                        <div style="
+                            font-size: 2rem;
+                            font-weight: bold;
+                            background: var(--cosmic-gradient);
+                            -webkit-background-clip: text;
+                            -webkit-text-fill-color: transparent;
+                            margin-bottom: 5px;
+                        ">
+                            ${userData.roomsCreated || 0}
+                        </div>
+                        <div style="color: var(--text-muted); font-size: 0.9rem;">Räume</div>
+                    </div>
+                    
+                    <div style="
+                        background: var(--bg-input);
+                        padding: 20px;
+                        border-radius: 12px;
+                        text-align: center;
+                        border: 1px solid var(--border);
+                    ">
+                        <div style="
+                            font-size: 2rem;
+                            font-weight: bold;
+                            background: var(--cosmic-gradient);
+                            -webkit-background-clip: text;
+                            -webkit-text-fill-color: transparent;
+                            margin-bottom: 5px;
+                        ">
+                            ${userData.reactionsReceived || 0}
+                        </div>
+                        <div style="color: var(--text-muted); font-size: 0.9rem;">Reactions</div>
+                    </div>
+                    
+                    <div style="
+                        background: var(--bg-input);
+                        padding: 20px;
+                        border-radius: 12px;
+                        text-align: center;
+                        border: 1px solid var(--border);
+                    ">
+                        <div style="
+                            font-size: 2rem;
+                            font-weight: bold;
+                            background: var(--cosmic-gradient);
+                            -webkit-background-clip: text;
+                            -webkit-text-fill-color: transparent;
+                            margin-bottom: 5px;
+                        ">
+                            ${userData.friendsCount || 0}
+                        </div>
+                        <div style="color: var(--text-muted); font-size: 0.9rem;">Freunde</div>
+                    </div>
+                </div>
+                
+                <div style="
+                    background: var(--bg-input);
+                    padding: 20px;
+                    border-radius: 12px;
+                    margin-bottom: 20px;
+                    border: 1px solid var(--border);
+                ">
+                    <h3 style="margin-bottom: 10px;">📅 Mitglied seit</h3>
+                    <p style="color: var(--text-muted);">
+                        ${userData.createdAt ? new Date(userData.createdAt).toLocaleDateString('de-DE') : 'Unbekannt'}
+                    </p>
+                </div>
+                
+                <div style="display: flex; gap: 10px; justify-content: center;">
+                    <button onclick="startPrivateChatFromProfile('${userId}', '${escapeHtml(userData.displayName)}')" style="
+                        background: var(--cosmic-gradient);
+                        border: none;
+                        padding: 12px 25px;
+                        border-radius: 12px;
+                        color: white;
+                        font-weight: bold;
+                        cursor: pointer;
+                        transition: all 0.3s ease;
+                    " onmouseover="this.style.transform='translateY(-2px)'" 
+                       onmouseout="this.style.transform='translateY(0)'">
+                        💬 Privat Chat
+                    </button>
+                    
+                    <button onclick="this.closest('.modal').remove()" style="
+                        background: transparent;
+                        border: 2px solid var(--border);
+                        padding: 12px 25px;
+                        border-radius: 12px;
+                        color: var(--text);
+                        font-weight: bold;
+                        cursor: pointer;
+                        transition: all 0.3s ease;
+                    " onmouseover="this.style.background='var(--bg-input)'" 
+                       onmouseout="this.style.background='transparent'">
+                        Schließen
+                    </button>
+                </div>
+            </div>
+        `;
+        
+        // Modal zum Body hinzufügen
+        document.body.appendChild(modal);
+        
+        // Klick außerhalb schließt Modal
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                modal.remove();
+            }
+        });
+        
+    } catch (error) {
+        console.error('Fehler beim Laden des Profils:', error);
+        showNotification('❌ Fehler beim Laden des Profils', 'error');
+    }
+}
+
+// Hilfsfunktion für privaten Chat vom Profil
+function startPrivateChatFromProfile(userId, userName) {
+    // Modal schließen
+    document.querySelector('.modal')?.remove();
+    
+    // Chat starten
+    if (window.startPrivateChat) {
+        window.startPrivateChat(userId, userName);
+    } else {
+        showNotification('💬 Privater Chat wird gestartet...', 'info');
+    }
+}
+
+// Online Users System - FIXED VERSION
+async function initOnlineUsers() {
+    const roomId = localStorage.getItem('roomId');
+    if (!roomId) {
+        console.error('❌ Keine roomId im localStorage');
+        return;
+    }
+
+    console.log('👥 Initialisiere Online-User für Raum:', roomId);
+    
+    try {
+        // 1. Zuerst Raum-Mitglieder laden
+        const roomSnapshot = await db.ref(`rooms/${roomId}/members`).once('value');
+        const members = roomSnapshot.val() || {};
+        console.log('📊 Raum-Mitglieder:', Object.keys(members).length);
+        
+        if (Object.keys(members).length === 0) {
+            console.log('⚠️ Keine Mitglieder im Raum');
+            updateOnlineUsersUI([], 0);
+            return;
+        }
+        
+        // 2. Für jedes Mitglied den Status laden
+        const memberIds = Object.keys(members);
+        const users = [];
+        
+        // Batch-Loading der User-Daten
+        const userPromises = memberIds.map(async (userId) => {
+            try {
+                const userSnapshot = await db.ref(`users/${userId}`).once('value');
+                const userData = userSnapshot.val();
+                
+                if (userData && !userData.isBanned) {
+                    return {
+                        uid: userId,
+                        displayName: userData.displayName || 'Unbekannt',
+                        email: userData.email || '',
+                        avatar: userData.avatar || generateDefaultAvatar(userData.displayName || 'User'),
+                        status: userData.status || 'offline',
+                        role: userData.role || 'user',
+                        lastSeen: userData.lastSeen || null
+                    };
+                }
+                return null;
+            } catch (error) {
+                console.error('Fehler beim Laden von User:', userId, error);
+                return null;
+            }
+        });
+        
+        const userResults = await Promise.all(userPromises);
+        
+        // Filtere null Werte und nur Online-User
+        const onlineUsers = userResults
+            .filter(user => user !== null && user.status === 'online')
+            .sort((a, b) => a.displayName.localeCompare(b.displayName));
+        
+        console.log('✅ Online-User gefunden:', onlineUsers.length);
+        
+        // 3. UI aktualisieren
+        updateOnlineUsersUI(onlineUsers, onlineUsers.length);
+        
+        // 4. Real-time Listener für Status-Änderungen
+        setupRealTimeStatusListeners(memberIds);
+        
+    } catch (error) {
+        console.error('❌ Fehler in initOnlineUsers:', error);
+        updateOnlineUsersUI([], 0);
+    }
+}
+
+function setupRealTimeStatusListeners(userIds) {
+    // Clean up previous listeners
+    if (window.statusListeners) {
+        Object.values(window.statusListeners).forEach(unsubscribe => unsubscribe());
+    }
+    
+    window.statusListeners = {};
+    
+    // Set up new listeners
+    userIds.forEach(userId => {
+        const statusRef = db.ref(`users/${userId}/status`);
+        const listener = statusRef.on('value', (snapshot) => {
+            // Debounce: Aktualisiere nur alle 2 Sekunden
+            clearTimeout(window.onlineUpdateTimeout);
+            window.onlineUpdateTimeout = setTimeout(() => {
+                initOnlineUsers(); // Neu laden
+            }, 2000);
+        });
+        
+        window.statusListeners[userId] = () => statusRef.off('value', listener);
+    });
+}
+
+function updateOnlineUsersUI(users, count) {
+    const onlineList = document.getElementById('online-users-list');
+    const onlineCount = document.getElementById('online-count');
+    
+    if (!onlineList || !onlineCount) {
+        console.error('❌ Online-User Elemente nicht gefunden');
+        return;
+    }
+    
+    // Count aktualisieren
+    onlineCount.textContent = `${count} online`;
+    
+    // Liste aktualisieren
+    if (!users || users.length === 0) {
+        onlineList.innerHTML = `
+            <div style="
+                text-align: center; 
+                padding: 30px 20px; 
+                color: var(--text-muted);
+                font-style: italic;
+            ">
+                👤 Keine User online
+            </div>
+        `;
+        return;
+    }
+    
+    let html = '';
+    users.forEach(user => {
+        const avatar = user.avatar || generateDefaultAvatar(user.displayName);
+        const isAdmin = user.role === 'admin';
+        
+        html += `
+            <div class="online-user-item" 
+                 style="
+                    display: flex;
+                    align-items: center;
+                    padding: 12px;
+                    border-radius: 10px;
+                    margin-bottom: 8px;
+                    background: var(--bg-input);
+                    border: 1px solid var(--border);
+                    transition: all 0.3s ease;
+                    cursor: pointer;
+                 "
+                 onmouseover="this.style.background='var(--primary)'; this.style.transform='translateX(5px)'"
+                 onmouseout="this.style.background='var(--bg-input)'; this.style.transform='translateX(0)'"
+                 onclick="showUserProfile('${user.uid}')"
+                 title="Klicken für Profil">
+                
+                <div style="
+                    width: 12px;
+                    height: 12px;
+                    border-radius: 50%;
+                    background: #10b981;
+                    margin-right: 12px;
+                    animation: pulse 2s infinite;
+                "></div>
+                
+                <img src="${avatar}" 
+                     alt="${user.displayName}"
+                     style="
+                         width: 40px;
+                         height: 40px;
+                         border-radius: 50%;
+                         margin-right: 12px;
+                         border: 2px solid ${isAdmin ? '#f59e0b' : 'var(--border)'};
+                         object-fit: cover;
+                     "
+                     onerror="this.src='${generateDefaultAvatar(user.displayName)}'">
+                
+                <div style="flex: 1; min-width: 0;">
+                    <div style="
+                        font-weight: 600;
+                        font-size: 0.95rem;
+                        color: var(--text);
+                        white-space: nowrap;
+                        overflow: hidden;
+                        text-overflow: ellipsis;
+                    ">
+                        ${escapeHtml(user.displayName)}
+                        ${isAdmin ? ' 👑' : ''}
+                    </div>
+                    <div style="
+                        font-size: 0.8rem;
+                        color: var(--text-muted);
+                        margin-top: 2px;
+                    ">
+                        🟢 Online
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+    
+    onlineList.innerHTML = html;
+}
+
+function updateOnlineUsersUI(users, count) {
+    const onlineList = document.getElementById('online-users-list');
+    const onlineCount = document.getElementById('online-count');
+    
+    if (!onlineList || !onlineCount) {
+        console.log('❌ Online-User Elemente nicht gefunden');
+        return;
+    }
+    
+    // Count aktualisieren
+    onlineCount.textContent = `${count} online`;
+    
+    // Liste aktualisieren
+    if (users.length === 0) {
+        onlineList.innerHTML = `
+            <div style="text-align: center; padding: 20px; color: var(--text-muted);">
+                👤 Keine User online
+            </div>
+        `;
+        return;
+    }
+    
+    let html = '';
+    users.forEach(user => {
+        const avatar = user.avatar || generateDefaultAvatar(user.displayName || user.email);
+        
+        html += `
+            <div class="online-user-item" style="
+                display: flex;
+                align-items: center;
+                padding: 10px;
+                border-radius: 8px;
+                margin-bottom: 8px;
+                background: var(--bg-input);
+                transition: all 0.3s ease;
+            " onmouseover="this.style.background='var(--primary)'" 
+               onmouseout="this.style.background='var(--bg-input)'">
+                <div style="
+                    width: 10px;
+                    height: 10px;
+                    border-radius: 50%;
+                    background: #10b981;
+                    margin-right: 10px;
+                    animation: pulse 2s infinite;
+                "></div>
+                
+                <img src="${avatar}" 
+                     alt="Avatar" 
+                     style="
+                         width: 35px;
+                         height: 35px;
+                         border-radius: 50%;
+                         margin-right: 10px;
+                         border: 2px solid var(--border);
+                     "
+                     onerror="this.src='${generateDefaultAvatar(user.displayName || 'User')}'">
+                
+                <span style="
+                    flex: 1;
+                    font-weight: 600;
+                    font-size: 0.9rem;
+                ">${escapeHtml(user.displayName || 'User')}</span>
+                
+                <button onclick="showUserProfile('${user.uid}')" 
+                        style="
+                            background: none;
+                            border: none;
+                            color: var(--text);
+                            cursor: pointer;
+                            font-size: 1rem;
+                        "
+                        title="Profil anzeigen">👤</button>
+            </div>
+        `;
+    });
+    
+    onlineList.innerHTML = html;
+}
+
+function setupOnlineUsersRealtime(roomId, memberIds) {
+    // Status-Änderungen überwachen
+    memberIds.forEach(uid => {
+        db.ref(`users/${uid}/status`).on('value', (snapshot) => {
+            // Alle paar Sekunden neu laden, um Overhead zu vermeiden
+            setTimeout(() => initOnlineUsers(), 1000);
+        });
+    });
+}
+
+// In initChat() aufrufen:
+async function initChat() {
+    // ... bestehender Code ...
+    
+    // Online Users initialisieren
+    initOnlineUsers();
+    
+    // ... restlicher Code ...
+}
+
+// Simple user ban function
+async function banUser(userId) {
+    if (!confirm('Diesen Benutzer wirklich bannen?\n\nEr kann sich danach nicht mehr einloggen.')) return;
+    
+    try {
+        await db.ref(`users/${userId}`).update({
+            isBanned: true,
+            status: 'banned',
+            banDate: Date.now(),
+            bannedBy: auth.currentUser.uid
+        });
+        
+        showNotification('⛔ Benutzer wurde gebannt', 'success');
+        
+        // Close profile modal
+        const modal = document.querySelector('.modal.profile-modal');
+        if (modal) modal.remove();
+        
+    } catch (error) {
+        console.error('Ban error:', error);
+        showNotification('❌ Fehler beim Bannen', 'error');
+    }
+}
+
 // Avatar aus Dashboard übernehmen
 function syncAvatarFromDashboard() {
     const user = auth.currentUser;
@@ -145,6 +717,98 @@ function syncAvatarFromDashboard() {
     });
 }
 
+// ENHANCED AVATAR PERSISTENCE SYSTEM
+async function saveUserAvatar(avatarData) {
+    const user = auth.currentUser;
+    if (!user) return;
+    
+    try {
+        await db.ref(`users/${user.uid}`).update({
+            avatar: avatarData,
+            lastUpdated: Date.now()
+        });
+        
+        // Auch in Firebase Auth speichern (falls möglich)
+        if (user.updateProfile) {
+            try {
+                await user.updateProfile({
+                    photoURL: avatarData
+                });
+            } catch (e) {
+                console.log('⚠️ Avatar nur in DB gespeichert (kein Auth Update)');
+            }
+        }
+        
+        currentUserAvatar = avatarData;
+        console.log('✅ Avatar gespeichert in Firebase');
+        
+        // Lokal speichern als Backup
+        localStorage.setItem(`user_avatar_${user.uid}`, avatarData);
+        
+    } catch (error) {
+        console.error('❌ Fehler beim Speichern des Avatars:', error);
+        
+        // Fallback: LocalStorage
+        localStorage.setItem(`user_avatar_${user.uid}`, avatarData);
+        currentUserAvatar = avatarData;
+        console.log('⚠️ Avatar in LocalStorage gespeichert (Fallback)');
+    }
+}
+
+async function loadCurrentUserAvatar() {
+    const user = auth.currentUser;
+    if (!user) {
+        currentUserAvatar = generateDefaultAvatar('User');
+        return;
+    }
+    
+    try {
+        // 1. Versuche aus Firebase zu laden
+        const snapshot = await db.ref(`users/${user.uid}/avatar`).once('value');
+        let avatar = snapshot.val();
+        
+        // 2. Fallback: LocalStorage
+        if (!avatar || avatar === 'null' || avatar === '') {
+            avatar = localStorage.getItem(`user_avatar_${user.uid}`);
+        }
+        
+        // 3. Fallback: Avatar aus DisplayName generieren
+        if (!avatar || avatar === 'null' || avatar === '') {
+            avatar = generateDefaultAvatar(user.displayName || user.email);
+        }
+        
+        // 4. Avatar in Firebase speichern falls noch nicht geschehen
+        if (!snapshot.exists() || !snapshot.val()) {
+            await db.ref(`users/${user.uid}/avatar`).set(avatar);
+        }
+        
+        currentUserAvatar = avatar;
+        console.log('✅ Avatar geladen:', avatar.substring(0, 50) + '...');
+        
+    } catch (error) {
+        console.error('Avatar Fehler:', error);
+        
+        // Fallback: LocalStorage
+        const localAvatar = localStorage.getItem(`user_avatar_${user.uid}`);
+        currentUserAvatar = localAvatar || generateDefaultAvatar(user.displayName || user.email);
+    }
+}
+
+// Avatar Sync von Dashboard zu Chat
+function syncAvatarFromDashboard() {
+    const user = auth.currentUser;
+    if (!user) return;
+    
+    db.ref(`users/${user.uid}/avatar`).on('value', (snapshot) => {
+        const avatarData = snapshot.val();
+        if (avatarData && avatarData !== 'null' && avatarData !== '') {
+            currentUserAvatar = avatarData;
+            updateUserAvatarInUI();
+            console.log('✅ Avatar synchronisiert');
+        }
+    });
+}
+
 // Enhanced Theme System
 function initTheme() {
     const savedTheme = localStorage.getItem('chat-theme') || 'dark';
@@ -180,6 +844,64 @@ function toggleTheme() {
     showNotification(`Theme zu ${newTheme === 'light' ? '☀️ Light' : '🌙 Dark'} geändert`, 'success');
 }
 
+// Online Users System
+function initOnlineUsers() {
+    const roomId = localStorage.getItem('roomId');
+    if (!roomId) return;
+    
+    const onlineList = document.getElementById('online-users-list');
+    const onlineCount = document.getElementById('online-count');
+    
+    if (!onlineList || !onlineCount) return;
+    
+    // Lade Raum-Mitglieder
+    db.ref(`rooms/${roomId}/members`).on('value', async (snapshot) => {
+        const members = snapshot.val() || {};
+        const memberIds = Object.keys(members);
+        
+        if (memberIds.length === 0) {
+            onlineList.innerHTML = '<div class="no-results">👤 Keine User online</div>';
+            onlineCount.textContent = '0 online';
+            return;
+        }
+        
+        // Lade User-Status für jedes Mitglied
+        let onlineHtml = '';
+        let onlineCounter = 0;
+        
+        for (const userId of memberIds) {
+            try {
+                const userSnap = await db.ref(`users/${userId}`).once('value');
+                const user = userSnap.val();
+                
+                if (user) {
+                    const isOnline = user.status === 'online';
+                    if (isOnline) onlineCounter++;
+                    
+                    const avatar = user.avatar || generateDefaultAvatar(user.displayName);
+                    
+                    onlineHtml += `
+                        <div class="online-user-item">
+                            <span class="online-indicator" style="color: ${isOnline ? '#10b981' : '#64748b'}">
+                                ${isOnline ? '🟢' : '⚫'}
+                            </span>
+                            <span class="online-user-name">${escapeHtml(user.displayName || 'User')}</span>
+                            <button class="profile-btn" onclick="showUserProfile('${userId}')" title="Profil anzeigen">
+                                👤
+                            </button>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                console.error('Error loading user:', error);
+            }
+        }
+        
+        onlineList.innerHTML = onlineHtml;
+        onlineCount.textContent = `${onlineCounter} online`;
+    });
+}
+
 // In der initChat() Funktion hinzufügen:
 async function initChat() {
     if (chatInitialized) return;
@@ -187,7 +909,7 @@ async function initChat() {
 
     // Theme initialisieren
     initTheme();
-    
+    initOnlineUsers();
     // Rest der Initialisierung...
 }
 
@@ -286,32 +1008,59 @@ async function initChat() {
     }
 }
 
-// Enhanced User Avatar Loading
+// Message Path basierend auf Raumtyp
+function getMessagePath() {
+    const roomId = localStorage.getItem('roomId');
+    const roomType = localStorage.getItem('roomType');
+    
+    return roomType === 'private' ? `privateMessages/${roomId}` : `messages/${roomId}`;
+}
+
+// In loadMessages() ändern:
+function loadMessages() {
+    const messagePath = getMessagePath(); // <- HIER ÄNDERN
+    console.log('📥 Lade Nachrichten für Pfad:', messagePath);
+    
+    db.ref(messagePath).on('value', (snap) => {
+        // ... bestehender Code ...
+    });
+}
+
+// In sendMessage() ändern:
+async function sendMessage() {
+    // ... bestehender Code bis zum Erstellen von messageData ...
+    
+    const messagePath = getMessagePath(); // <- HIER ÄNDERN
+    console.log('📤 Sende Nachricht an Pfad:', messagePath);
+    
+    await db.ref(messagePath).push().set(messageData);
+    
+    // ... restlicher Code ...
+}
+
 async function loadCurrentUserAvatar() {
     const user = auth.currentUser;
     if (!user) {
-        currentUserAvatar = generateDefaultAvatar('User');
-        return;
-    }
-
-    try {
-        const snapshot = await db.ref(`users/${user.uid}/avatar`).once('value');
-        const avatarUrl = snapshot.val();
-        
-        if (avatarUrl && avatarUrl !== '') {
-            currentUserAvatar = avatarUrl;
-        } else {
-            const displayName = user.displayName || user.email || 'User';
-            currentUserAvatar = generateDefaultAvatar(displayName);
-        }
-    } catch (error) {
-        console.error('Fehler beim Laden des Avatars:', error);
-        const displayName = user.displayName || user.email || 'User';
-        currentUserAvatar = generateDefaultAvatar(displayName);
+      currentUserAvatar = generateDefaultAvatar('User');
+      return;
     }
     
-    updateUserAvatarInUI();
-}
+    try {
+      const snapshot = await db.ref(`users/${user.uid}/avatar`).once('value');
+      const avatar = snapshot.val();
+      
+      if (avatar && avatar !== 'null') {
+        currentUserAvatar = avatar;
+      } else {
+        currentUserAvatar = generateDefaultAvatar(user.displayName || user.email);
+      }
+      
+      console.log('✅ Avatar geladen');
+    } catch (error) {
+      console.error('Avatar Fehler:', error);
+      currentUserAvatar = generateDefaultAvatar(user.displayName || user.email);
+    }
+  }
 
 function updateUserAvatarInUI() {
     const ownMessages = document.querySelectorAll('.message.own .message-avatar');
@@ -1501,15 +2250,32 @@ function initSpaceBackground() {
 
 // Enhanced Event Listeners
 function setupEventListeners() {
-    // Logout
+    // Logout Button - VERWENDE DIE KORREKTE ID
+    const logoutBtnChat = document.getElementById('logout-btn');
+    
     if (logoutBtnChat) {
         logoutBtnChat.addEventListener('click', async () => {
-            try {
-                await auth.signOut();
-                showNotification('👋 Bis bald!', 'success');
-                setTimeout(() => window.location.href = 'index.html', 1000);
-            } catch (error) {
-                console.error('Logout error:', error);
+            const user = auth.currentUser;
+            if (user) {
+                try {
+                    await db.ref(`users/${user.uid}`).update({
+                        status: 'offline',
+                        lastSeen: Date.now()
+                    });
+                    
+                    await auth.signOut();
+                    showNotification('👋 Bis bald!', 'success');
+                    
+                    setTimeout(() => {
+                        window.location.href = 'index.html';
+                    }, 1000);
+                    
+                } catch (error) {
+                    console.error('Logout error:', error);
+                    window.location.href = 'index.html';
+                }
+            } else {
+                window.location.href = 'index.html';
             }
         });
     }

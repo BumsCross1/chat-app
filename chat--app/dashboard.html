@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Dashboard - Space Chat</title>
 <link rel="stylesheet" href="css/style.css">
+<!-- Firebase SDKs -->
 <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-database-compat.js"></script>
@@ -12,12 +13,18 @@
 <script src="js/dashboard.js" defer></script>
 </head>
 <body>
+
+<body>
   <div class="space-background"></div>
   <div class="stars"></div>
   <div class="planets"></div>
   <div class="asteroids"></div>
   <div class="comets"></div>
+
+
+  <div id="admin-section" class="content-section"></div>
   
+
   <div class="dashboard-container">
     <!-- Sidebar -->
     <div class="sidebar">
@@ -52,6 +59,12 @@
         <button class="menu-item" onclick="toggleTheme()">
           <span id="dashboard-theme-icon">🌙</span> Theme wechseln
         </button>
+
+        <button class="menu-item" onclick="showSection('admin')" id="admin-menu-item" style="display: none;">
+          👑 Admin Panel
+        </button>
+        <!-- Admin Section -->
+
       </div>
       
       <div class="sidebar-footer">

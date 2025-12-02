@@ -2964,3 +2964,427 @@ body {
   color: var(--text-muted);
   margin-top: 2px;
 }
+/* ===== ADMIN PANEL STYLES ===== */
+.admin-tabs {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border);
+  overflow-x: auto;
+}
+
+.admin-tab-btn {
+  padding: 10px 20px;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.admin-tab-btn:hover {
+  background: var(--primary);
+  color: white;
+}
+
+.admin-tab-btn.active {
+  background: var(--primary);
+  color: white;
+}
+
+.admin-tab-content {
+  display: none;
+}
+
+.admin-tab-content.active {
+  display: block;
+  animation: fadeIn 0.3s ease;
+}
+
+.admin-table-header {
+  display: grid;
+  grid-template-columns: 2fr 2fr 1fr 1fr 2fr;
+  gap: 15px;
+  padding: 15px;
+  background: var(--bg-input);
+  border-radius: 10px;
+  margin-bottom: 10px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.admin-user-row {
+  display: grid;
+  grid-template-columns: 2fr 2fr 1fr 1fr 2fr;
+  gap: 15px;
+  padding: 15px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  margin-bottom: 10px;
+  align-items: center;
+  transition: all 0.3s ease;
+}
+
+.admin-user-row:hover {
+  transform: translateY(-2px);
+  border-color: var(--primary);
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+}
+
+.user-cell {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.user-avatar-small {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 2px solid var(--primary);
+  object-fit: cover;
+}
+
+.user-name {
+  font-weight: 600;
+}
+
+.role-cell .role-badge {
+  padding: 5px 10px;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.role-badge.admin {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  color: white;
+}
+
+.role-badge.user {
+  background: var(--bg-input);
+  color: var(--text-muted);
+}
+
+.stats-cell {
+  display: flex;
+  gap: 10px;
+}
+
+.actions-cell {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.admin-action-btn {
+  padding: 8px 12px;
+  border: none;
+  border-radius: 8px;
+  background: var(--bg-input);
+  color: var(--text);
+  cursor: pointer;
+  font-size: 0.8rem;
+  transition: all 0.3s ease;
+  font-weight: 600;
+}
+
+.admin-action-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+}
+
+.admin-action-btn.ban {
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+  color: white;
+}
+
+.admin-action-btn.unban {
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: white;
+}
+
+.admin-action-btn.delete {
+  background: linear-gradient(135deg, #6b7280, #4b5563);
+  color: white;
+}
+
+.admin-action-btn.promote {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  color: white;
+}
+
+/* Admin Logs */
+.admin-log-entry {
+  padding: 15px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  margin-bottom: 10px;
+}
+
+.log-header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.log-action {
+  font-weight: 600;
+  color: var(--primary);
+}
+
+.log-timestamp {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.log-details {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+}
+
+/* Admin Stats Grid */
+.admin-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 15px;
+  margin-bottom: 20px;
+}
+
+.admin-stat-card {
+  background: var(--bg-card);
+  padding: 20px;
+  border-radius: 15px;
+  border: 1px solid var(--border);
+  text-align: center;
+}
+
+.admin-stat-value {
+  font-size: 2.5rem;
+  font-weight: bold;
+  background: var(--cosmic-gradient);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin-bottom: 5px;
+}
+
+.admin-stat-label {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+/* Bann Liste */
+.banned-user-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px;
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.1), transparent);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: 10px;
+  margin-bottom: 10px;
+}
+
+.banned-user-info {
+  flex: 1;
+}
+
+.banned-reason {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin-top: 5px;
+}
+
+/* Management Styles */
+.management-grid {
+  display: grid;
+  gap: 20px;
+}
+
+.management-card {
+  background: var(--bg-card);
+  padding: 20px;
+  border-radius: 15px;
+  border: 1px solid var(--border);
+}
+
+.danger-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 15px;
+}
+
+.room-id {
+  font-family: monospace;
+  background: var(--bg-input);
+  padding: 5px 10px;
+  border-radius: 5px;
+  margin: 10px 0;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+}
+
+/* Responsive Admin */
+@media (max-width: 768px) {
+  .admin-table-header,
+  .admin-user-row {
+      grid-template-columns: 1fr;
+      gap: 10px;
+  }
+  
+  .admin-tabs {
+      flex-direction: column;
+  }
+  
+  .admin-action-btn {
+      flex: 1;
+      text-align: center;
+  }
+}
+
+/* Loading Animation */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+
+/* ADMIN STYLES */
+.admin-table-header {
+  display: grid;
+  grid-template-columns: 2fr 2fr 1fr 2fr;
+  gap: 15px;
+  padding: 15px;
+  background: var(--bg-input);
+  border-radius: 10px;
+  margin-bottom: 10px;
+  font-weight: 600;
+}
+
+.admin-user-row {
+  display: grid;
+  grid-template-columns: 2fr 2fr 1fr 2fr;
+  gap: 15px;
+  padding: 15px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  margin-bottom: 10px;
+  align-items: center;
+}
+
+.user-avatar-small {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 2px solid var(--primary);
+  margin-right: 10px;
+}
+
+.user-cell {
+  display: flex;
+  align-items: center;
+}
+
+.role-badge {
+  padding: 5px 10px;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.role-badge.admin {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  color: white;
+}
+
+.role-badge.user {
+  background: var(--bg-input);
+  color: var(--text-muted);
+}
+
+.actions-cell {
+  display: flex;
+  gap: 8px;
+}
+
+.admin-action-btn {
+  padding: 8px 12px;
+  border: none;
+  border-radius: 8px;
+  background: var(--bg-input);
+  color: var(--text);
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.3s ease;
+}
+
+.admin-action-btn:hover {
+  transform: translateY(-2px);
+}
+
+.admin-action-btn.ban {
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+  color: white;
+}
+
+.admin-action-btn.delete {
+  background: linear-gradient(135deg, #6b7280, #4b5563);
+  color: white;
+}
+/* Online Users Styles */
+.online-user-item {
+  display: flex;
+  align-items: center;
+  padding: 10px;
+  border-radius: 8px;
+  margin-bottom: 8px;
+  background: var(--bg-input);
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.online-user-item:hover {
+  background: var(--primary);
+  transform: translateX(5px);
+}
+
+.online-indicator {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #10b981;
+  margin-right: 10px;
+  animation: pulse 2s infinite;
+}
+
+.online-user-name {
+  flex: 1;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.profile-btn {
+  background: none;
+  border: none;
+  color: var(--text);
+  cursor: pointer;
+  font-size: 1rem;
+  transition: transform 0.3s ease;
+}
+
+.profile-btn:hover {
+  transform: scale(1.2);
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
