@@ -649,62 +649,79 @@ async function joinRoom(roomId, roomName, isPrivate) {
   }
 }
 
-// ===== ROOM ERSTELLEN =====
 async function createRoom() {
   const name = document.getElementById('room-name')?.value.trim();
   const desc = document.getElementById('room-description')?.value.trim();
   const password = document.getElementById('room-password')?.value;
   
   if (!name) {
-    showNotification('❌ Bitte Namen eingeben', 'error');
-    return;
+      showNotification('❌ Bitte Namen eingeben', 'error');
+      return;
   }
   
   const btn = document.getElementById('create-room-btn');
+  const originalText = btn.innerHTML;
   btn.disabled = true;
   btn.innerHTML = '<div class="spinner"></div> Erstelle...';
   
   try {
-    const roomRef = window.db.ref('rooms').push();
-    const roomId = roomRef.key;
-    
-    const roomData = {
-      id: roomId,
-      name: name,
-      description: desc,
-      passwordHash: password || null,
-      isPrivate: !!password,
-      ownerId: currentUser.uid,
-      ownerName: currentUser.displayName || currentUser.email,
-      createdAt: Date.now(),
-      memberCount: 1,
-      members: {
-        [currentUser.uid]: {
+      const roomRef = db.ref('rooms').push();
+      const roomId = roomRef.key;
+      
+      const roomData = {
+          id: roomId,
+          name: name,
+          description: desc || '',
+          passwordHash: password || null,
+          isPrivate: !!password,
+          ownerId: currentUser.uid,
+          ownerName: currentUser.displayName || currentUser.email,
+          createdAt: Date.now(),
+          memberCount: 1,
+          lastActivity: Date.now(),
+          settings: {
+              allowImages: true,
+              allowVoice: true,
+              maxMembers: 100
+          }
+      };
+      
+      await roomRef.set(roomData);
+      
+      // ✅ WICHTIG: Rooms Created Count erhöhen
+      const userRoomsRef = db.ref(`users/${currentUser.uid}/roomsCreated`);
+      const roomsSnapshot = await userRoomsRef.once('value');
+      const currentRooms = roomsSnapshot.val() || 0;
+      await userRoomsRef.set(currentRooms + 1);
+      
+      // Mitglied hinzufügen
+      await db.ref(`rooms/${roomId}/members/${currentUser.uid}`).set({
           joinedAt: Date.now(),
-          role: 'owner'
-        }
-      }
-    };
-    
-    await roomRef.set(roomData);
-    
-    // User Stats
-    await window.db.ref(`users/${currentUser.uid}/roomsCreated`).transaction(c => (c || 0) + 1);
-    
-    // Formular leeren
-    document.getElementById('room-name').value = '';
-    document.getElementById('room-description').value = '';
-    document.getElementById('room-password').value = '';
-    
-    showNotification('🚀 Raum erstellt!', 'success');
-    showSection('rooms');
-    
+          role: 'owner',
+          displayName: currentUser.displayName || currentUser.email,
+          addedBy: 'self'
+      });
+      
+      // Formular leeren
+      document.getElementById('room-name').value = '';
+      document.getElementById('room-description').value = '';
+      document.getElementById('room-password').value = '';
+      
+      showNotification('🚀 Raum erstellt!', 'success');
+      showSection('rooms');
+      
+      // Statistiken neu laden
+      setTimeout(() => {
+          initStatistics();
+          loadRooms();
+      }, 500);
+      
   } catch (error) {
-    console.error('Create Room Fehler:', error);
-    showNotification('❌ Erstellen fehlgeschlagen', 'error');
+      console.error('Create Room Fehler:', error);
+      showNotification('❌ Erstellen fehlgeschlagen: ' + error.message, 'error');
   } finally {
-    btn.disabled = false;
-    btn.textContent = '🚀 Raum erstellen';
+      btn.disabled = false;
+      btn.innerHTML = originalText;
   }
 }
 
