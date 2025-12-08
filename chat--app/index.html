@@ -3,190 +3,795 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NextGen Space Chat - Login</title>
-    <link rel="stylesheet" href="css/style.css">
-    
-    <!-- 🔥 FIREBASE LIBS - DIESE REIHENFOLGE IST WICHTIG -->
+    <title>Login - Space Chat</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --primary-light: #8b5cf6;
+            --cosmic-gradient: linear-gradient(135deg, #6366f1, #8b5cf6, #ec4899, #f59e0b);
+            --bg-dark: #0f172a;
+            --bg-card: rgba(16, 18, 37, 0.95);
+            --bg-input: rgba(255, 255, 255, 0.1);
+            --text: #ffffff;
+            --text-muted: #a1a1c2;
+            --border: rgba(99, 102, 241, 0.5);
+            --success: #10b981;
+            --error: #ef4444;
+            --warning: #f59e0b;
+            --shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        [data-theme="light"] {
+            --bg-dark: #f8fafc;
+            --bg-card: rgba(255, 255, 255, 0.95);
+            --bg-input: rgba(0, 0, 0, 0.05);
+            --text: #1e293b;
+            --text-muted: #64748b;
+            --border: rgba(99, 102, 241, 0.3);
+        }
+
+        body {
+            background: var(--bg-dark);
+            color: var(--text);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Weltraum-Hintergrund */
+        .space-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            background: linear-gradient(to bottom, #000428, #004e92);
+        }
+
+        .stars {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                radial-gradient(2px 2px at 20px 30px, #eee, transparent),
+                radial-gradient(2px 2px at 40px 70px, #fff, transparent),
+                radial-gradient(2px 2px at 50px 160px, #ddd, transparent),
+                radial-gradient(2px 2px at 90px 40px, #fff, transparent),
+                radial-gradient(2px 2px at 130px 80px, #fff, transparent),
+                radial-gradient(2px 2px at 160px 120px, #ddd, transparent);
+            background-repeat: repeat;
+            background-size: 200px 200px;
+            animation: stars 50s linear infinite;
+            z-index: -1;
+        }
+
+        @keyframes stars {
+            from { transform: translateY(0); }
+            to { transform: translateY(-200px); }
+        }
+
+        /* Login Container */
+        .login-container {
+            width: 100%;
+            max-width: 450px;
+            padding: 20px;
+            z-index: 1;
+        }
+
+        .login-card {
+            background: var(--bg-card);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: var(--shadow);
+            animation: fadeIn 0.8s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .login-header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .login-header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            background: var(--cosmic-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .login-header p {
+            color: var(--text-muted);
+            font-size: 1.1rem;
+        }
+
+        /* Form Styles */
+        .form-group {
+            margin-bottom: 25px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: var(--text);
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 15px 20px;
+            background: var(--bg-input);
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            color: var(--text);
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+        }
+
+        .form-input::placeholder {
+            color: var(--text-muted);
+        }
+
+        /* Buttons */
+        .btn {
+            width: 100%;
+            padding: 16px;
+            border: none;
+            border-radius: 12px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .btn-primary {
+            background: var(--cosmic-gradient);
+            color: white;
+            margin-top: 10px;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(99, 102, 241, 0.3);
+        }
+
+        .btn-secondary {
+            background: var(--bg-input);
+            color: var(--text);
+            border: 2px solid var(--border);
+            margin-top: 15px;
+        }
+
+        .btn-secondary:hover {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+
+        /* Divider */
+        .divider {
+            display: flex;
+            align-items: center;
+            margin: 30px 0;
+            color: var(--text-muted);
+        }
+
+        .divider::before,
+        .divider::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: var(--border);
+        }
+
+        .divider span {
+            padding: 0 15px;
+        }
+
+        /* Toggle Password */
+        .password-toggle {
+            position: absolute;
+            right: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            padding: 5px;
+        }
+
+        .password-wrapper {
+            position: relative;
+        }
+
+        /* Theme Toggle */
+        .theme-toggle {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 1.5rem;
+            z-index: 100;
+            transition: all 0.3s ease;
+        }
+
+        .theme-toggle:hover {
+            transform: scale(1.1);
+        }
+
+        /* Error Message */
+        .error-message {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            color: var(--error);
+            padding: 12px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            display: none;
+            animation: slideDown 0.3s ease;
+        }
+
+        @keyframes slideDown {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .error-message.show {
+            display: block;
+        }
+
+        /* Loading Spinner */
+        .spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Links */
+        .links {
+            text-align: center;
+            margin-top: 25px;
+            color: var(--text-muted);
+        }
+
+        .links a {
+            color: var(--primary);
+            text-decoration: none;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .links a:hover {
+            text-decoration: underline;
+        }
+
+        /* Responsive */
+        @media (max-width: 480px) {
+            .login-card {
+                padding: 30px 20px;
+            }
+            
+            .login-header h1 {
+                font-size: 2rem;
+            }
+            
+            .theme-toggle {
+                width: 40px;
+                height: 40px;
+                font-size: 1.2rem;
+            }
+        }
+
+        /* Animations */
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        /* Particle Background */
+        #particles-js {
+            position: fixed;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+        }
+    </style>
+    <!-- Firebase SDKs -->
     <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-database-compat.js"></script> <!-- 🔥 DIESE ZEILE WAR VERMUTLICH FEHLEND -->
-    
-    <!-- 🔥 EIGENE SCRIPTS -->
-    <script src="js/firebase.js"></script> <!-- Wird zuerst geladen -->
-    <script src="js/auth.js" defer></script> <!-- Wird nach DOM geladen -->
+    <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-database-compat.js"></script>
+    <script src="js/firebase.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js" defer></script>
 </head>
-<body>
-  <div class="space-background"></div>
-  <div class="stars"></div>
-  <div class="planets"></div>
-  <div class="asteroids"></div>
-  <div class="comets"></div>
-  
-  <div class="auth-container">
-    <div class="auth-card">
-      <div class="auth-header">
-        <h1>🚀 Space Chat</h1>
-        <p class="auth-subtitle">Der ultimative Echtzeit-Chat im Weltraum</p>
-      </div>
-  
-      <div class="tabs">
-        <div class="tab active" onclick="showTab('login')">Login</div>
-        <div class="tab" onclick="showTab('register')">Registrieren</div>
-      </div>
-  
-      <!-- Login Tab -->
-      <div id="login-tab" class="tab-content">
-        <div class="input-group">
-          <input id="login-email" type="email" class="modern-input" placeholder="📧 Deine Email">
-        </div>
-        <div class="input-group">
-          <input id="login-password" type="password" class="modern-input" placeholder="🔒 Passwort">
-        </div>
-        <button id="login-btn" class="modern-btn cosmic-btn">🚀 Anmelden</button>
-      </div>
-  
-      <!-- Register Tab -->
-      <div id="register-tab" class="tab-content hidden">
-        <div class="input-group">
-          <input id="register-email" type="email" class="modern-input" placeholder="📧 Email Adresse">
-        </div>
-        <div class="input-group">
-          <input id="register-password" type="password" class="modern-input" placeholder="🔒 Passwort (min. 6 Zeichen)">
-        </div>
-        <div class="input-group">
-          <input id="register-displayname" type="text" class="modern-input" placeholder="👤 Anzeigename">
-        </div>
-        <button id="register-btn" class="modern-btn cosmic-btn">🎉 Account erstellen</button>
-      </div>
-  
-      <div id="error-msg" class="error-message"></div>
-  
-      <!-- Features Section -->
-      <div class="info-box">
-        <h3>🌟 Warum Space Chat?</h3>
-        <div class="features-grid">
-          <div class="feature">
-            <span class="feature-icon">⚡</span>
-            <span>Echtzeit Nachrichten</span>
-          </div>
-          <div class="feature">
-            <span class="feature-icon">🔒</span>
-            <span>Juri Penis</span>
-          </div>
-          <div class="feature">
-            <span class="feature-icon">🎮</span>
-            <span>Aaron Kaka</span>
-          </div>
-          <div class="feature">
-            <span class="feature-icon">❤️</span>
-            <span>Kostja Hesse</span>
-          </div>
-          <div class="feature">
-            <span class="feature-icon">👑</span>
-            <span>Soßen zersahnung</span>
-          </div>
-          <div class="feature">
-            <span class="feature-icon">🎨</span>
-            <span>Custom Avatare</span>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-  
-  <script>
-  // Particle Background
-  function createStars(count) {
-    const container = document.querySelector('.stars');
-    for (let i = 0; i < count; i++) {
-      const star = document.createElement('div');
-      star.className = 'star';
-      
-      const size = Math.random() * 3 + 1;
-      const posX = Math.random() * 100;
-      const posY = Math.random() * 100;
-      const duration = Math.random() * 4 + 2;
-      const delay = Math.random() * 5;
-      
-      star.style.width = `${size}px`;
-      star.style.height = `${size}px`;
-      star.style.left = `${posX}%`;
-      star.style.top = `${posY}%`;
-      star.style.animationDelay = `${delay}s`;
-      star.style.animationDuration = `${duration}s`;
-      
-      container.appendChild(star);
-    }
-  }
-
-  function createPlanets() {
-    const container = document.querySelector('.planets');
-    const planets = [
-      { class: 'planet-1' },
-      { class: 'planet-2' },
-      { class: 'planet-3' },
-      { class: 'planet-4' }
-    ];
+<body data-theme="dark">
+    <!-- Weltraum-Hintergrund -->
+    <div class="space-bg"></div>
+    <div class="stars"></div>
+    <div id="particles-js"></div>
     
-    planets.forEach(planet => {
-      const planetEl = document.createElement('div');
-      planetEl.className = `planet ${planet.class}`;
-      container.appendChild(planetEl);
-    });
-  }
-
-  function createAsteroids(count) {
-    const container = document.querySelector('.asteroids');
-    for (let i = 0; i < count; i++) {
-      const asteroid = document.createElement('div');
-      asteroid.className = 'asteroid';
-      
-      const size = Math.random() * 4 + 2;
-      const posY = Math.random() * 100;
-      const duration = Math.random() * 10 + 15;
-      const delay = Math.random() * 20;
-      
-      asteroid.style.width = `${size}px`;
-      asteroid.style.height = `${size}px`;
-      asteroid.style.top = `${posY}%`;
-      asteroid.style.animationDelay = `${delay}s`;
-      asteroid.style.animationDuration = `${duration}s`;
-      
-      container.appendChild(asteroid);
-    }
-  }
-
-  function createComets(count) {
-    const container = document.querySelector('.comets');
-    for (let i = 0; i < count; i++) {
-      const comet = document.createElement('div');
-      comet.className = 'comet';
-      
-      const posY = Math.random() * 100;
-      const delay = Math.random() * 15;
-      
-      comet.style.top = `${posY}%`;
-      comet.style.animationDelay = `${delay}s`;
-      
-      container.appendChild(comet);
-    }
-  }
-  
-  function showTab(tabName) {
-    document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
-    document.querySelectorAll('.tab-content').forEach(content => content.classList.add('hidden'));
-  
-    document.querySelector(`.tab:nth-child(${tabName === 'login' ? 1 : 2})`).classList.add('active');
-    document.getElementById(`${tabName}-tab`).classList.remove('hidden');
-  }
-  
-  // Initialize space background when page loads
-  document.addEventListener('DOMContentLoaded', () => {
-    createStars(200);
-    createPlanets();
-    createAsteroids(15);
-    createComets(3);
-  });
-  </script>
+    <!-- Theme Toggle -->
+    <button class="theme-toggle" id="theme-toggle">🌙</button>
+    
+    <!-- Login Container -->
+    <div class="login-container">
+        <div class="login-card">
+            <div class="login-header">
+                <h1>🚀 Space Chat</h1>
+                <p>Willkommen in der intergalaktischen Chat-Welt</p>
+            </div>
+            
+            <!-- Error Message -->
+            <div id="error-message" class="error-message"></div>
+            
+            <!-- Login Form -->
+            <form id="login-form">
+                <div class="form-group">
+                    <label for="email">📧 Email Adresse</label>
+                    <input 
+                        type="email" 
+                        id="email" 
+                        class="form-input" 
+                        placeholder="deine@email.com"
+                        required
+                    >
+                </div>
+                
+                <div class="form-group">
+                    <label for="password">🔑 Passwort</label>
+                    <div class="password-wrapper">
+                        <input 
+                            type="password" 
+                            id="password" 
+                            class="form-input" 
+                            placeholder="Dein Passwort"
+                            required
+                        >
+                        <button type="button" class="password-toggle" id="toggle-password">👁️</button>
+                    </div>
+                </div>
+                
+                <button type="submit" class="btn btn-primary" id="login-btn">
+                    <span id="login-text">🚀 Login</span>
+                    <span id="login-spinner" class="spinner" style="display: none;"></span>
+                </button>
+            </form>
+            
+            <div class="divider">
+                <span>oder</span>
+            </div>
+            
+            <!-- Register Button -->
+            <button class="btn btn-secondary" id="register-btn">
+                📝 Account erstellen
+            </button>
+            
+            <!-- Guest Button -->
+            <button class="btn btn-secondary" id="guest-btn" style="margin-top: 10px;">
+                👤 Als Gast testen
+            </button>
+            
+            <div class="links">
+                <p>Vergessen? <a href="#" id="reset-password">Passwort zurücksetzen</a></p>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Script -->
+    <script>
+        // Warte auf Firebase Initialisierung
+        document.addEventListener('DOMContentLoaded', async () => {
+            console.log('🚀 Login-Seite wird geladen...');
+            
+            // Warte auf Firebase
+            await waitForFirebase();
+            
+            // Initialisiere UI
+            initLoginUI();
+            
+            // Prüfe ob bereits eingeloggt
+            checkAuthState();
+        });
+        
+        async function waitForFirebase() {
+            return new Promise((resolve) => {
+                const check = setInterval(() => {
+                    if (window.auth && window.db) {
+                        clearInterval(check);
+                        console.log('✅ Firebase bereit für Login');
+                        resolve();
+                    }
+                }, 100);
+            });
+        }
+        
+        function initLoginUI() {
+            // Theme aus localStorage laden
+            const savedTheme = localStorage.getItem('chat-theme') || 'dark';
+            document.body.setAttribute('data-theme', savedTheme);
+            
+            // Theme Toggle
+            const themeToggle = document.getElementById('theme-toggle');
+            themeToggle.textContent = savedTheme === 'dark' ? '🌙' : '☀️';
+            
+            themeToggle.addEventListener('click', () => {
+                const current = document.body.getAttribute('data-theme') || 'dark';
+                const newTheme = current === 'dark' ? 'light' : 'dark';
+                
+                document.body.setAttribute('data-theme', newTheme);
+                localStorage.setItem('chat-theme', newTheme);
+                themeToggle.textContent = newTheme === 'dark' ? '🌙' : '☀️';
+                
+                showMessage(`Theme: ${newTheme === 'light' ? 'Light' : 'Dark'}`, 'info');
+            });
+            
+            // Passwort Toggle
+            const togglePassword = document.getElementById('toggle-password');
+            const passwordInput = document.getElementById('password');
+            
+            togglePassword.addEventListener('click', () => {
+                const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+                passwordInput.setAttribute('type', type);
+                togglePassword.textContent = type === 'password' ? '👁️' : '🙈';
+            });
+            
+            // Login Form
+            const loginForm = document.getElementById('login-form');
+            loginForm.addEventListener('submit', handleLogin);
+            
+            // Register Button
+            document.getElementById('register-btn').addEventListener('click', handleRegister);
+            
+            // Guest Button
+            document.getElementById('guest-btn').addEventListener('click', handleGuest);
+            
+            // Reset Password
+            document.getElementById('reset-password').addEventListener('click', handleResetPassword);
+            
+            // Particles Background
+            initParticles();
+            
+            console.log('✅ Login-UI initialisiert');
+        }
+        
+        function checkAuthState() {
+            if (!window.auth) return;
+            
+            window.auth.onAuthStateChanged((user) => {
+                if (user) {
+                    console.log('👤 Bereits eingeloggt:', user.email);
+                    showMessage('✅ Bereits eingeloggt!', 'success');
+                    
+                    // Weiterleitung zum Dashboard
+                    setTimeout(() => {
+                        window.location.href = 'dashboard.html';
+                    }, 1000);
+                }
+            });
+        }
+        
+        async function handleLogin(e) {
+            e.preventDefault();
+            
+            const email = document.getElementById('email').value.trim();
+            const password = document.getElementById('password').value;
+            
+            if (!email || !password) {
+                showMessage('❌ Bitte Email und Passwort eingeben', 'error');
+                return;
+            }
+            
+            // Login Button deaktivieren
+            const loginBtn = document.getElementById('login-btn');
+            const loginText = document.getElementById('login-text');
+            const loginSpinner = document.getElementById('login-spinner');
+            
+            loginBtn.disabled = true;
+            loginText.textContent = 'Wird eingeloggt...';
+            loginSpinner.style.display = 'inline-block';
+            
+            try {
+                console.log('🔐 Versuche Login...');
+                
+                // Firebase Login
+                const userCredential = await window.auth.signInWithEmailAndPassword(email, password);
+                const user = userCredential.user;
+                
+                console.log('✅ Login erfolgreich:', user.email);
+                showMessage('✅ Login erfolgreich!', 'success');
+                
+                // Weiterleitung zum Dashboard
+                setTimeout(() => {
+                    window.location.href = 'dashboard.html';
+                }, 1000);
+                
+            } catch (error) {
+                console.error('❌ Login Fehler:', error);
+                
+                let errorMessage = '❌ Login fehlgeschlagen';
+                
+                switch (error.code) {
+                    case 'auth/invalid-email':
+                        errorMessage = '❌ Ungültige Email-Adresse';
+                        break;
+                    case 'auth/user-disabled':
+                        errorMessage = '❌ Account wurde deaktiviert';
+                        break;
+                    case 'auth/user-not-found':
+                        errorMessage = '❌ Kein Account mit dieser Email gefunden';
+                        break;
+                    case 'auth/wrong-password':
+                        errorMessage = '❌ Falsches Passwort';
+                        break;
+                    case 'auth/too-many-requests':
+                        errorMessage = '❌ Zu viele fehlgeschlagene Versuche. Bitte später erneut versuchen';
+                        break;
+                    default:
+                        errorMessage = `❌ ${error.message}`;
+                }
+                
+                showMessage(errorMessage, 'error');
+                
+                // Button zurücksetzen
+                loginBtn.disabled = false;
+                loginText.textContent = '🚀 Login';
+                loginSpinner.style.display = 'none';
+            }
+        }
+        
+        async function handleRegister() {
+            const email = document.getElementById('email').value.trim();
+            const password = document.getElementById('password').value;
+            
+            if (!email || !password) {
+                showMessage('❌ Bitte Email und Passwort für die Registrierung eingeben', 'error');
+                return;
+            }
+            
+            if (password.length < 6) {
+                showMessage('❌ Passwort muss mindestens 6 Zeichen lang sein', 'error');
+                return;
+            }
+            
+            const registerBtn = document.getElementById('register-btn');
+            const originalText = registerBtn.textContent;
+            
+            registerBtn.disabled = true;
+            registerBtn.innerHTML = '<span class="spinner"></span> Registriere...';
+            
+            try {
+                console.log('📝 Versuche Registrierung...');
+                
+                // Firebase Registrierung
+                const userCredential = await window.auth.createUserWithEmailAndPassword(email, password);
+                const user = userCredential.user;
+                
+                // Display Name setzen (Email ohne Domain)
+                const displayName = email.split('@')[0];
+                await user.updateProfile({
+                    displayName: displayName
+                });
+                
+                // User in Datenbank speichern
+                await window.db.ref('users/' + user.uid).set({
+                    uid: user.uid,
+                    email: user.email,
+                    displayName: displayName,
+                    avatar: generateAvatar(displayName),
+                    createdAt: Date.now(),
+                    lastLogin: Date.now(),
+                    status: 'online',
+                    role: 'user',
+                    messageCount: 0,
+                    roomsCreated: 0,
+                    lastSeen: Date.now()
+                });
+                
+                console.log('✅ Registrierung erfolgreich:', user.email);
+                showMessage('✅ Account erstellt! Willkommen!', 'success');
+                
+                // Weiterleitung
+                setTimeout(() => {
+                    window.location.href = 'dashboard.html';
+                }, 1500);
+                
+            } catch (error) {
+                console.error('❌ Registrierung Fehler:', error);
+                
+                let errorMessage = '❌ Registrierung fehlgeschlagen';
+                
+                switch (error.code) {
+                    case 'auth/email-already-in-use':
+                        errorMessage = '❌ Email wird bereits verwendet';
+                        break;
+                    case 'auth/invalid-email':
+                        errorMessage = '❌ Ungültige Email-Adresse';
+                        break;
+                    case 'auth/operation-not-allowed':
+                        errorMessage = '❌ Email/Passwort Registrierung ist nicht aktiviert';
+                        break;
+                    case 'auth/weak-password':
+                        errorMessage = '❌ Passwort ist zu schwach';
+                        break;
+                    default:
+                        errorMessage = `❌ ${error.message}`;
+                }
+                
+                showMessage(errorMessage, 'error');
+                
+                // Button zurücksetzen
+                registerBtn.disabled = false;
+                registerBtn.textContent = originalText;
+            }
+        }
+        
+        function handleGuest() {
+            showMessage('👤 Gast-Login wird vorbereitet...', 'info');
+            
+            // Gast-Login mit generierter Email
+            const guestEmail = `guest_${Date.now()}@spacechat.com`;
+            const guestPassword = 'guest123';
+            
+            // Email und Passwort für Gast eintragen
+            document.getElementById('email').value = guestEmail;
+            document.getElementById('password').value = guestPassword;
+            
+            // Automatisch registrieren und einloggen
+            setTimeout(() => {
+                handleRegister();
+            }, 500);
+        }
+        
+        async function handleResetPassword(e) {
+            e.preventDefault();
+            
+            const email = document.getElementById('email').value.trim();
+            
+            if (!email) {
+                showMessage('❌ Bitte Email eingeben', 'error');
+                return;
+            }
+            
+            try {
+                await window.auth.sendPasswordResetEmail(email);
+                showMessage('✅ Passwort-Reset Email wurde gesendet!', 'success');
+            } catch (error) {
+                console.error('❌ Reset Password Fehler:', error);
+                showMessage('❌ Fehler beim Senden der Reset-Email', 'error');
+            }
+        }
+        
+        function showMessage(message, type = 'info') {
+            const errorDiv = document.getElementById('error-message');
+            
+            errorDiv.textContent = message;
+            errorDiv.className = 'error-message';
+            errorDiv.classList.add('show');
+            
+            if (type === 'success') {
+                errorDiv.style.background = 'rgba(16, 185, 129, 0.1)';
+                errorDiv.style.borderColor = 'rgba(16, 185, 129, 0.3)';
+                errorDiv.style.color = '#10b981';
+            } else if (type === 'error') {
+                errorDiv.style.background = 'rgba(239, 68, 68, 0.1)';
+                errorDiv.style.borderColor = 'rgba(239, 68, 68, 0.3)';
+                errorDiv.style.color = '#ef4444';
+            } else {
+                errorDiv.style.background = 'rgba(59, 130, 246, 0.1)';
+                errorDiv.style.borderColor = 'rgba(59, 130, 246, 0.3)';
+                errorDiv.style.color = '#3b82f6';
+            }
+            
+            // Auto-hide nach 5 Sekunden
+            setTimeout(() => {
+                errorDiv.classList.remove('show');
+            }, 5000);
+        }
+        
+        function initParticles() {
+            if (typeof particlesJS !== 'undefined') {
+                particlesJS('particles-js', {
+                    particles: {
+                        number: { value: 80, density: { enable: true, value_area: 800 } },
+                        color: { value: "#ffffff" },
+                        shape: { type: "circle" },
+                        opacity: { value: 0.5, random: true },
+                        size: { value: 3, random: true },
+                        line_linked: {
+                            enable: true,
+                            distance: 150,
+                            color: "#6366f1",
+                            opacity: 0.2,
+                            width: 1
+                        },
+                        move: {
+                            enable: true,
+                            speed: 1,
+                            direction: "none",
+                            random: true,
+                            straight: false,
+                            out_mode: "out",
+                            bounce: false
+                        }
+                    },
+                    interactivity: {
+                        detect_on: "canvas",
+                        events: {
+                            onhover: { enable: true, mode: "repulse" },
+                            onclick: { enable: true, mode: "push" }
+                        }
+                    }
+                });
+            }
+        }
+        
+        // Avatar Generator (falls nicht in firebase.js)
+        function generateAvatar(name) {
+            if (!name) name = 'User';
+            const initials = name.charAt(0).toUpperCase();
+            const colors = ['#6366f1', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981'];
+            const color = colors[initials.charCodeAt(0) % colors.length];
+            
+            const svg = `<svg width="100" height="100" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><circle cx="50" cy="50" r="50" fill="${color}"/><text x="50" y="55" font-family="Arial" font-size="40" fill="white" text-anchor="middle" dominant-baseline="middle">${initials}</text></svg>`;
+            return `data:image/svg+xml;base64,${btoa(svg)}`;
+        }
+        
+        // Globale Funktionen
+        window.generateAvatar = generateAvatar;
+        window.showMessage = showMessage;
+    </script>
 </body>
 </html>
