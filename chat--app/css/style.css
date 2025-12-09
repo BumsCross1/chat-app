@@ -7556,3 +7556,346 @@ body {
   cursor: pointer;
   padding: 0 10px;
 }
+
+/* ===== MODAL IMPROVEMENTS ===== */
+.modal-content.large-modal {
+  max-width: 800px;
+  width: 90%;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.modal-body {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+}
+
+.management-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--border-color);
+  padding: 0 20px;
+  background: var(--card-bg);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.tab-btn {
+  padding: 15px 20px;
+  background: none;
+  border: none;
+  border-bottom: 3px solid transparent;
+  font-size: 14px;
+  cursor: pointer;
+  color: var(--text-color);
+  transition: all 0.3s;
+  white-space: nowrap;
+}
+
+.tab-btn:hover {
+  background: var(--hover-color);
+}
+
+.tab-btn.active {
+  border-bottom-color: var(--primary-color);
+  color: var(--primary-color);
+  font-weight: 600;
+}
+
+.management-tab {
+  display: none;
+  flex: 1;
+  overflow: hidden;
+}
+
+.management-tab.active {
+  display: flex;
+  flex-direction: column;
+}
+
+.tab-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px;
+}
+
+/* ===== MEMBERS LIST ===== */
+.members-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.members-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 400px;
+  overflow-y: auto;
+  padding-right: 5px;
+}
+
+.member-item {
+  display: flex;
+  align-items: center;
+  padding: 12px 15px;
+  background: var(--card-bg);
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  transition: transform 0.2s;
+}
+
+.member-item:hover {
+  transform: translateX(5px);
+  background: var(--hover-color);
+}
+
+.member-item.online {
+  border-left: 4px solid #10b981;
+}
+
+.member-item.offline {
+  border-left: 4px solid #6b7280;
+}
+
+.member-avatar {
+  position: relative;
+  margin-right: 15px;
+}
+
+.member-avatar img {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.online-dot {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 2px solid var(--card-bg);
+  background: #6b7280;
+}
+
+.online-dot.active {
+  background: #10b981;
+}
+
+.member-info {
+  flex: 1;
+}
+
+.member-name {
+  font-weight: 600;
+  margin-bottom: 4px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.role-badge {
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-weight: normal;
+}
+
+.role-badge.owner {
+  background: #fbbf24;
+  color: #000;
+}
+
+.role-badge.you {
+  background: var(--primary-color);
+  color: white;
+}
+
+.member-details {
+  display: flex;
+  gap: 15px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.member-actions {
+  display: flex;
+  gap: 5px;
+}
+
+.action-btn {
+  padding: 6px 10px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s;
+}
+
+.action-btn.kick {
+  background: #ef4444;
+  color: white;
+}
+
+.action-btn.promote {
+  background: #f59e0b;
+  color: white;
+}
+
+.action-btn.leave {
+  background: #6b7280;
+  color: white;
+}
+
+.action-btn:hover {
+  opacity: 0.8;
+  transform: scale(1.05);
+}
+
+/* ===== DANGER ZONE ===== */
+.danger-zone {
+  text-align: center;
+  padding: 20px;
+}
+
+.danger-warning {
+  color: #ef4444;
+  margin-bottom: 30px;
+  font-size: 16px;
+}
+
+.danger-actions {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 15px;
+  margin-bottom: 20px;
+}
+
+.danger-btn {
+  padding: 15px;
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.danger-btn.delete {
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+  color: white;
+}
+
+.danger-btn.transfer {
+  background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+  color: white;
+}
+
+.danger-btn.archive {
+  background: linear-gradient(135deg, #6366f1, #4f46e5);
+  color: white;
+}
+
+.danger-btn.clear {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  color: white;
+}
+
+.danger-btn:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+}
+
+.danger-info {
+  margin-top: 20px;
+  padding: 10px;
+  background: rgba(239, 68, 68, 0.1);
+  border-radius: 6px;
+  border-left: 4px solid #ef4444;
+}
+
+/* ===== SCROLLBAR ===== */
+.members-list::-webkit-scrollbar,
+.tab-content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.members-list::-webkit-scrollbar-track,
+.tab-content::-webkit-scrollbar-track {
+  background: var(--bg-color);
+  border-radius: 3px;
+}
+
+.members-list::-webkit-scrollbar-thumb,
+.tab-content::-webkit-scrollbar-thumb {
+  background: var(--primary-color);
+  border-radius: 3px;
+}
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 768px) {
+  .modal-content.large-modal {
+      width: 95%;
+      max-height: 90vh;
+  }
+  
+  .management-tabs {
+      padding: 0 10px;
+  }
+  
+  .tab-btn {
+      padding: 12px 10px;
+      font-size: 12px;
+  }
+  
+  .danger-actions {
+      grid-template-columns: 1fr;
+  }
+  
+  .member-item {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 10px;
+  }
+  
+  .member-actions {
+      align-self: flex-end;
+  }
+}
+
+/* In style.css hinzufügen */
+.password-change-section {
+  margin-top: 30px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border-color);
+}
+
+.password-change-section h3 {
+  margin-bottom: 15px;
+  color: var(--text-color);
+}
+
+.password-requirements {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 5px;
+}
+
+/* Alternativ die Input-Groups anpassen */
+.input-group input[type="password"] {
+  margin-bottom: 8px;
+}

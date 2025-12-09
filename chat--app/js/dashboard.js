@@ -389,7 +389,7 @@ function createRoomCard(room) {
     const isMember = room.members && room.members[currentUser?.uid];
     const isPrivate = room.isPrivate || room.passwordHash;
     const onlineCount = room.onlineCount || 0;
-    const totalMembers = room.memberCount || 0;
+    const totalMembers = room.memberCount || 0; // Nur noch für interne Logik
     
     // Berechne Aktivitätsstatus
     const lastActivity = room.lastActivity || room.createdAt;
@@ -415,7 +415,8 @@ function createRoomCard(room) {
         <div class="room-stats">
             <div class="room-stat">
                 <span class="stat-icon">👥</span>
-                <span class="stat-value">${onlineCount}/${totalMembers}</span>
+                <!-- GEÄNDERT: Nur onlineCount anzeigen, nicht das Verhältnis -->
+                <span class="stat-value">${onlineCount}</span>
                 <span class="stat-label">online</span>
             </div>
             <div class="room-stat">
@@ -619,8 +620,6 @@ async function createRoom() {
     }
 }
 
-// ===== RAUMVERWALTUNG - VOLLSTÄNDIG FUNKTIONAL =====
-
 async function openRoomManagement(roomId) {
     try {
         // Lade Raum-Daten
@@ -650,121 +649,130 @@ async function openRoomManagement(roomId) {
                     
                     <div class="modal-body">
                         <div class="management-tabs">
-                            <button class="tab-btn active" onclick="switchManagementTab('settings')">
+                            <button class="tab-btn active" onclick="switchRoomManagementTab('settings')" data-tab="settings">
                                 ⚙️ Einstellungen
                             </button>
-                            <button class="tab-btn" onclick="switchManagementTab('members')">
+                            <button class="tab-btn" onclick="switchRoomManagementTab('members')" data-tab="members">
                                 👥 Mitglieder (${room.memberCount || 1})
                             </button>
-                            <button class="tab-btn" onclick="switchManagementTab('danger')">
+                            <button class="tab-btn" onclick="switchRoomManagementTab('danger')" data-tab="danger">
                                 ⚠️ Gefahrenzone
                             </button>
                         </div>
                         
+                        <!-- TAB 1: EINSTELLUNGEN -->
                         <div id="management-settings" class="management-tab active">
-                            <div class="form-group">
-                                <label>Raum Name</label>
-                                <input type="text" id="manage-room-name" 
-                                       value="${escapeHtml(room.name)}" 
-                                       class="modern-input"
-                                       placeholder="Raum Name">
-                            </div>
-                            
-                            <div class="form-group">
-                                <label>Beschreibung</label>
-                                <textarea id="manage-room-desc" 
-                                          class="modern-input"
-                                          rows="3"
-                                          placeholder="Raum Beschreibung">${escapeHtml(room.description || '')}</textarea>
-                            </div>
-                            
-                            <div class="form-group">
-                                <label>Passwort (leer lassen um zu entfernen)</label>
-                                <input type="password" id="manage-room-password" 
-                                       class="modern-input"
-                                       placeholder="Neues Passwort...">
-                                <small>${room.isPrivate ? '🔒 Der Raum ist aktuell privat' : '🌐 Der Raum ist aktuell öffentlich'}</small>
-                            </div>
-                            
-                            <div class="form-group">
-                                <label>Maximale Mitglieder</label>
-                                <input type="number" id="manage-room-maxmembers" 
-                                       value="${room.settings?.maxMembers || 100}"
-                                       min="2" max="500"
-                                       class="modern-input">
-                            </div>
-                            
-                            <div class="form-group">
-                                <label>
-                                    <input type="checkbox" id="manage-room-allowimages" 
-                                           ${room.settings?.allowImages ? 'checked' : ''}>
-                                    Bilder erlauben
-                                </label>
-                                
-                                <label>
-                                    <input type="checkbox" id="manage-room-allowfiles" 
-                                           ${room.settings?.allowFiles ? 'checked' : ''}>
-                                    Dateien erlauben
-                                </label>
-                                
-                                <label>
-                                    <input type="checkbox" id="manage-room-slowmode" 
-                                           ${room.settings?.slowMode ? 'checked' : ''}>
-                                    Slow Mode
-                                </label>
-                            </div>
-                            
-                            <button class="modern-btn cosmic-btn full-width" 
-                                    onclick="saveRoomSettings('${roomId}')">
-                                💾 Änderungen speichern
-                            </button>
-                        </div>
-                        
-                        <div id="management-members" class="management-tab" style="display: none;">
-                            <div class="members-header">
-                                <h3>👥 Raummitglieder</h3>
-                                <button class="modern-btn secondary-btn" 
-                                        onclick="refreshRoomMembers('${roomId}')">
-                                    🔄 Aktualisieren
-                                </button>
-                            </div>
-                            
-                            <div id="members-list" class="members-list">
-                                Lade Mitglieder...
-                            </div>
-                        </div>
-                        
-                        <div id="management-danger" class="management-tab" style="display: none;">
-                            <div class="danger-zone">
-                                <h3>⚠️ Gefahrenzone</h3>
-                                <p>Diese Aktionen können nicht rückgängig gemacht werden!</p>
-                                
-                                <div class="danger-actions">
-                                    <button class="danger-btn delete" 
-                                            onclick="deleteRoom('${roomId}')">
-                                        🗑️ Raum löschen
-                                    </button>
-                                    
-                                    <button class="danger-btn transfer" 
-                                            onclick="transferRoomOwnership('${roomId}')">
-                                        👑 Besitz übertragen
-                                    </button>
-                                    
-                                    ${isAdmin ? `
-                                        <button class="danger-btn archive" 
-                                                onclick="archiveRoom('${roomId}')">
-                                            📁 Archivieren
-                                        </button>
-                                        
-                                        <button class="danger-btn clear" 
-                                                onclick="clearRoomMessages('${roomId}')">
-                                            💬 Nachrichten löschen
-                                        </button>
-                                    ` : ''}
+                            <div class="tab-content-inner">
+                                <div class="form-group">
+                                    <label>Raum Name</label>
+                                    <input type="text" id="manage-room-name" 
+                                           value="${escapeHtml(room.name)}" 
+                                           class="modern-input"
+                                           placeholder="Raum Name">
                                 </div>
                                 
-                                <div class="danger-info">
-                                    <small>⚠️ Achtung: Gelöschte Räume können nicht wiederhergestellt werden!</small>
+                                <div class="form-group">
+                                    <label>Beschreibung</label>
+                                    <textarea id="manage-room-desc" 
+                                              class="modern-input"
+                                              rows="3"
+                                              placeholder="Raum Beschreibung">${escapeHtml(room.description || '')}</textarea>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label>Passwort (leer lassen um zu entfernen)</label>
+                                    <input type="password" id="manage-room-password" 
+                                           class="modern-input"
+                                           placeholder="Neues Passwort...">
+                                    <small>${room.isPrivate ? '🔒 Der Raum ist aktuell privat' : '🌐 Der Raum ist aktuell öffentlich'}</small>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label>Maximale Mitglieder</label>
+                                    <input type="number" id="manage-room-maxmembers" 
+                                           value="${room.settings?.maxMembers || 100}"
+                                           min="2" max="500"
+                                           class="modern-input">
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label>
+                                        <input type="checkbox" id="manage-room-allowimages" 
+                                               ${room.settings?.allowImages ? 'checked' : ''}>
+                                        Bilder erlauben
+                                    </label>
+                                    
+                                    <label>
+                                        <input type="checkbox" id="manage-room-allowfiles" 
+                                               ${room.settings?.allowFiles ? 'checked' : ''}>
+                                        Dateien erlauben
+                                    </label>
+                                    
+                                    <label>
+                                        <input type="checkbox" id="manage-room-slowmode" 
+                                               ${room.settings?.slowMode ? 'checked' : ''}>
+                                        Slow Mode
+                                    </label>
+                                </div>
+                                
+                                <button class="modern-btn cosmic-btn full-width" 
+                                        onclick="saveRoomSettings('${roomId}')">
+                                    💾 Änderungen speichern
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- TAB 2: MITGLIEDER -->
+                        <div id="management-members" class="management-tab" style="display: none;">
+                            <div class="tab-content-inner">
+                                <div class="members-header">
+                                    <h3>👥 Raummitglieder (${Object.keys(room.members || {}).length} total)</h3>
+                                    <button class="modern-btn secondary-btn" 
+                                            onclick="refreshRoomMembers('${roomId}')">
+                                        🔄 Aktualisieren
+                                    </button>
+                                </div>
+                                
+                                <div id="members-list" class="members-list">
+                                    Lade Mitglieder...
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- TAB 3: GEFAHRENZONE -->
+                        <div id="management-danger" class="management-tab" style="display: none;">
+                            <div class="tab-content-inner">
+                                <div class="danger-zone">
+                                    <h3>⚠️ Gefahrenzone</h3>
+                                    <p>Diese Aktionen können nicht rückgängig gemacht werden!</p>
+                                    
+                                    <div class="danger-actions">
+                                        <button class="danger-btn delete" 
+                                                onclick="deleteRoom('${roomId}')">
+                                            🗑️ Raum löschen
+                                        </button>
+                                        
+                                        <button class="danger-btn transfer" 
+                                                onclick="transferRoomOwnership('${roomId}')">
+                                            👑 Besitz übertragen
+                                        </button>
+                                        
+                                        ${isAdmin ? `
+                                            <button class="danger-btn archive" 
+                                                    onclick="archiveRoom('${roomId}')">
+                                                📁 Archivieren
+                                            </button>
+                                            
+                                            <button class="danger-btn clear" 
+                                                    onclick="clearRoomMessages('${roomId}')">
+                                                💬 Nachrichten löschen
+                                            </button>
+                                        ` : ''}
+                                    </div>
+                                    
+                                    <div class="danger-info">
+                                        <small>⚠️ Achtung: Gelöschte Räume können nicht wiederhergestellt werden!</small>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -784,8 +792,15 @@ async function openRoomManagement(roomId) {
         modalContainer.innerHTML = modalHTML;
         document.body.appendChild(modalContainer);
         
-        // Mitglieder laden
-        await loadRoomMembers(roomId);
+        // Füge Event-Listener für Tabs hinzu
+        setTimeout(() => {
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const tabName = this.getAttribute('data-tab');
+                    switchRoomManagementTab(tabName);
+                });
+            });
+        }, 100);
         
     } catch (error) {
         console.error('❌ Room Management Error:', error);
@@ -1157,9 +1172,12 @@ function refreshRoomMembers(roomId) {
 }
 
 function switchManagementTab(tabName) {
+    console.log('Switching to tab:', tabName);
+    
     // Alle Tabs ausblenden
     document.querySelectorAll('.management-tab').forEach(tab => {
         tab.style.display = 'none';
+        tab.classList.remove('active');
     });
     
     // Alle Tab-Buttons deaktivieren
@@ -1170,16 +1188,37 @@ function switchManagementTab(tabName) {
     // Gewählten Tab anzeigen
     const activeTab = document.getElementById(`management-${tabName}`);
     if (activeTab) {
-        activeTab.style.display = 'block';
+        activeTab.style.display = 'flex';
+        activeTab.classList.add('active');
+        
+        // Wenn Mitglieder-Tab, dann Mitglieder laden
+        if (tabName === 'members') {
+            loadRoomMembers(window.currentRoomId || getRoomIdFromModal());
+        }
     }
     
     // Gewählten Button aktivieren
-    const activeBtn = Array.from(document.querySelectorAll('.tab-btn')).find(btn => 
-        btn.textContent.includes(tabName.charAt(0).toUpperCase() + tabName.slice(1))
-    );
+    const activeBtn = document.querySelector(`.tab-btn[data-tab="${tabName}"]`);
     if (activeBtn) {
         activeBtn.classList.add('active');
     }
+}
+
+function getRoomIdFromModal() {
+    // Extrahiere roomId aus dem Modal
+    const modal = document.getElementById('room-management-modal');
+    if (!modal) return null;
+    
+    // Suche nach buttons mit onclick-Handlern, die roomId enthalten
+    const buttons = modal.querySelectorAll('button[onclick]');
+    for (let btn of buttons) {
+        const onclick = btn.getAttribute('onclick') || '';
+        const match = onclick.match(/'([^']+)'/);
+        if (match && match[1]) {
+            return match[1];
+        }
+    }
+    return null;
 }
 
 // ===== USER SEARCH SYSTEM =====
@@ -1466,6 +1505,17 @@ async function showUserProfileModal(userId) {
     }
 }
 
+async function resetPassword() {
+    const email = currentUser.email;
+    
+    try {
+        await window.auth.sendPasswordResetEmail(email);
+        showNotification('📧 Passwort-Reset Email wurde gesendet', 'success');
+    } catch (error) {
+        showNotification('❌ Fehler beim Senden der Reset-Email', 'error');
+    }
+}
+
 function closeUserProfileModal() {
     const modal = document.getElementById('user-profile-modal');
     if (modal) modal.remove();
@@ -1480,7 +1530,7 @@ async function startPrivateChat(userId, userName) {
     }
     
     try {
-        // Eindeutige Room-ID erstellen
+        // Eindeutige Room-ID erstellen (sortiert für Konsistenz)
         const participants = [currentUser.uid, userId].sort();
         const roomId = `private_${participants[0]}_${participants[1]}`;
         const roomName = `Privat mit ${userName}`;
@@ -1490,6 +1540,17 @@ async function startPrivateChat(userId, userName) {
         const snapshot = await roomRef.once('value');
         
         if (!snapshot.exists()) {
+            // NEU: Prüfe ob der andere User existiert
+            const otherUserRef = window.db.ref(`users/${userId}`);
+            const otherUserSnap = await otherUserRef.once('value');
+            
+            if (!otherUserSnap.exists()) {
+                showNotification('❌ User nicht gefunden', 'error');
+                return;
+            }
+            
+            const otherUserData = otherUserSnap.val();
+            
             // Neuen privaten Chat erstellen
             await roomRef.set({
                 id: roomId,
@@ -1498,31 +1559,58 @@ async function startPrivateChat(userId, userName) {
                     [currentUser.uid]: true,
                     [userId]: true
                 },
+                participantNames: {
+                    [currentUser.uid]: currentUserData.displayName,
+                    [userId]: otherUserData.displayName
+                },
+                participantAvatars: {
+                    [currentUser.uid]: currentUserData.avatar,
+                    [userId]: otherUserData.avatar || generateAvatar(otherUserData.displayName)
+                },
                 createdAt: Date.now(),
                 lastActivity: Date.now(),
                 type: 'private',
-                isPrivate: true
+                isPrivate: true,
+                lastMessage: '',
+                lastMessageTime: Date.now(),
+                unreadCount: {
+                    [currentUser.uid]: 0,
+                    [userId]: 0
+                }
             });
+            
+            // Für beide User speichern
+            await Promise.all([
+                window.db.ref(`users/${currentUser.uid}/privateChats/${roomId}`).set({
+                    with: userId,
+                    withName: otherUserData.displayName,
+                    withAvatar: otherUserData.avatar,
+                    roomId: roomId,
+                    joinedAt: Date.now(),
+                    lastSeen: Date.now(),
+                    isMuted: false
+                }),
+                window.db.ref(`users/${userId}/privateChats/${roomId}`).set({
+                    with: currentUser.uid,
+                    withName: currentUserData.displayName,
+                    withAvatar: currentUserData.avatar,
+                    roomId: roomId,
+                    joinedAt: Date.now(),
+                    lastSeen: 0,
+                    isMuted: false
+                })
+            ]);
+        } else {
+            // Chat existiert bereits - aktualisiere lastSeen
+            await window.db.ref(`users/${currentUser.uid}/privateChats/${roomId}/lastSeen`).set(Date.now());
         }
-        
-        // Für beide User speichern
-        await Promise.all([
-            window.db.ref(`users/${currentUser.uid}/privateChats/${roomId}`).set({
-                with: userId,
-                name: roomName,
-                joinedAt: Date.now()
-            }),
-            window.db.ref(`users/${userId}/privateChats/${roomId}`).set({
-                with: currentUser.uid,
-                name: `Privat mit ${currentUserData.displayName}`,
-                joinedAt: Date.now()
-            })
-        ]);
         
         // Weiterleitung vorbereiten
         localStorage.setItem('currentRoomId', roomId);
         localStorage.setItem('currentRoomName', roomName);
         localStorage.setItem('roomType', 'private');
+        localStorage.setItem('privateChatWith', userId);
+        localStorage.setItem('privateChatWithName', userName);
         
         showNotification(`💬 Chat mit ${userName} gestartet`, 'success');
         
@@ -1818,6 +1906,100 @@ function setupEventListeners() {
     
     // Theme Toggle
     document.getElementById('theme-toggle-btn')?.addEventListener('click', toggleTheme);
+
+    // Passwort ändern
+    document.getElementById('change-password-btn')?.addEventListener('click', changePassword);
+
+  // Passwort-Enter-Taste unterstützen
+    document.getElementById('confirm-password')?.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            changePassword();
+        }
+    });
+}
+
+async function changePassword() {
+    const currentPassword = document.getElementById('current-password').value;
+    const newPassword = document.getElementById('new-password').value;
+    const confirmPassword = document.getElementById('confirm-password').value;
+    
+    if (!currentPassword || !newPassword || !confirmPassword) {
+        showNotification('❌ Bitte alle Felder ausfüllen', 'error');
+        return;
+    }
+    
+    if (newPassword !== confirmPassword) {
+        showNotification('❌ Die neuen Passwörter stimmen nicht überein', 'error');
+        return;
+    }
+    
+    if (newPassword.length < 6) {
+        showNotification('❌ Das Passwort muss mindestens 6 Zeichen lang sein', 'error');
+        return;
+    }
+    
+    try {
+        const user = window.auth.currentUser;
+        
+        // Re-authenticate user
+        const credential = window.firebase.auth.EmailAuthProvider.credential(
+            user.email, 
+            currentPassword
+        );
+        
+        await user.reauthenticateWithCredential(credential);
+        
+        // Update password
+        await user.updatePassword(newPassword);
+        
+        // Felder leeren
+        document.getElementById('current-password').value = '';
+        document.getElementById('new-password').value = '';
+        document.getElementById('confirm-password').value = '';
+        
+        // Password change log in database
+        await window.db.ref(`users/${user.uid}/passwordChanges`).push({
+            changedAt: Date.now(),
+            ip: await getClientIP(),
+            userAgent: navigator.userAgent
+        });
+        
+        showNotification('✅ Passwort erfolgreich geändert!', 'success');
+        
+        // Automatisch ausloggen nach Passwortänderung (Sicherheit)
+        setTimeout(() => {
+            showNotification('🔒 Aus Sicherheitsgründen wirst du abgemeldet...', 'info');
+            setTimeout(() => logout(), 2000);
+        }, 3000);
+        
+    } catch (error) {
+        console.error('❌ Passwort ändern Fehler:', error);
+        
+        switch(error.code) {
+            case 'auth/wrong-password':
+                showNotification('❌ Das aktuelle Passwort ist falsch', 'error');
+                break;
+            case 'auth/requires-recent-login':
+                showNotification('❌ Bitte melde dich erneut an, um dein Passwort zu ändern', 'error');
+                break;
+            case 'auth/weak-password':
+                showNotification('❌ Das Passwort ist zu schwach. Verwende mindestens 6 Zeichen', 'error');
+                break;
+            default:
+                showNotification('❌ Fehler beim Ändern des Passworts: ' + error.message, 'error');
+        }
+    }
+}
+
+// Hilfsfunktion für Client IP (näherungsweise)
+async function getClientIP() {
+    try {
+        const response = await fetch('https://api.ipify.org?format=json');
+        const data = await response.json();
+        return data.ip;
+    } catch (error) {
+        return 'unknown';
+    }
 }
 
 function filterRooms() {
@@ -2181,12 +2363,56 @@ async function promoteToAdmin(userId) {
     }
 }
 
+
+// ===== ROOM MANAGEMENT TAB FUNCTION =====
+function switchRoomManagementTab(tabName) {
+    console.log('Wechsel zu Tab:', tabName);
+    
+    // Verstecke alle Tabs
+    document.querySelectorAll('.management-tab').forEach(tab => {
+        tab.style.display = 'none';
+    });
+    
+    // Entferne 'active' Klasse von allen Tab-Buttons
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    
+    // Zeige den gewählten Tab
+    const activeTab = document.getElementById(`management-${tabName}`);
+    if (activeTab) {
+        activeTab.style.display = 'block';
+    }
+    
+    // Aktiviere den gewählten Button
+    const activeBtn = document.querySelector(`.tab-btn[data-tab="${tabName}"]`);
+    if (activeBtn) {
+        activeBtn.classList.add('active');
+    }
+    
+    // Lade Mitglieder wenn nötig
+    if (tabName === 'members') {
+        // Extrahiere roomId aus dem Modal
+        const deleteBtn = document.querySelector('.danger-btn.delete[onclick]');
+        if (deleteBtn) {
+            const onclickText = deleteBtn.getAttribute('onclick');
+            const roomIdMatch = onclickText.match(/'([^']+)'/);
+            if (roomIdMatch && roomIdMatch[1]) {
+                loadRoomMembers(roomIdMatch[1]);
+            }
+        }
+    }
+}
+
+// Ersetze die alte Funktion
+window.switchManagementTab = switchRoomManagementTab;
 // ===== GLOBALE FUNKTIONEN EXPORT =====
 
 window.showSection = showSection;
 window.toggleTheme = toggleTheme;
 window.removeAvatar = removeAvatar;
 window.refreshRooms = refreshRooms;
+window.changePassword = changePassword;
 window.openRoomManagement = openRoomManagement;
 window.saveRoomSettings = saveRoomSettings;
 window.deleteRoom = deleteRoom;
@@ -2210,6 +2436,7 @@ window.filterRooms = filterRooms;
 window.joinRoom = joinRoom;
 window.createRoom = createRoom;
 window.logout = logout;
+
 
 console.log('✅ Dashboard.js vollständig geladen');
 console.log('🔄 Dashboard.js Version: 2.0 - ' + new Date().toISOString());
