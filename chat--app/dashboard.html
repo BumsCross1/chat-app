@@ -14,18 +14,11 @@
 </head>
 <body>
 
-<body>
   <div class="space-background"></div>
   <div class="stars"></div>
   <div class="planets"></div>
   <div class="asteroids"></div>
   <div class="comets"></div>
-
-
-  <div id="admin-section" class="content-section">
-    <div class="loading">👑 Lade Admin-Panel...</div>
-  </div>
-  
 
   <div class="dashboard-container">
     <!-- Sidebar -->
@@ -65,8 +58,6 @@
         <button class="menu-item" onclick="showSection('admin')" id="admin-menu-item" style="display: none;">
           👑 Admin Panel
         </button>
-        <!-- Admin Section -->
-
       </div>
       
       <div class="sidebar-footer">
@@ -146,7 +137,7 @@
         </div>
       </div>
       
-      <!-- Profile Section -->
+      <!-- Profile Section - ERWEITERT mit Passwort ändern -->
       <div id="profile-section" class="content-section">
         <div class="section-header">
           <h1>👤 Profil bearbeiten</h1>
@@ -175,7 +166,41 @@
             <input type="email" id="user-email" class="modern-input" disabled>
           </div>
           
-          <button id="save-profile-btn" class="modern-btn cosmic-btn">
+          <!-- NEU: Passwort ändern Section -->
+          <div class="password-change-section" style="margin-top: 30px; padding-top: 20px; border-top: 1px solid var(--border-color);">
+            <h3 style="margin-bottom: 15px;">🔐 Passwort ändern</h3>
+            
+            <div class="input-group">
+              <label>Aktuelles Passwort</label>
+              <div style="position: relative;">
+                <input type="password" id="current-password" class="modern-input" placeholder="Aktuelles Passwort...">
+                <button type="button" class="password-toggle" onclick="togglePassword('current-password')" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer;">👁️</button>
+              </div>
+            </div>
+            
+            <div class="input-group">
+              <label>Neues Passwort</label>
+              <div style="position: relative;">
+                <input type="password" id="new-password" class="modern-input" placeholder="Neues Passwort...">
+                <button type="button" class="password-toggle" onclick="togglePassword('new-password')" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer;">👁️</button>
+              </div>
+              <small style="color: var(--text-muted); display: block; margin-top: 5px;">Mindestens 6 Zeichen</small>
+            </div>
+            
+            <div class="input-group">
+              <label>Passwort bestätigen</label>
+              <div style="position: relative;">
+                <input type="password" id="confirm-password" class="modern-input" placeholder="Neues Passwort wiederholen...">
+                <button type="button" class="password-toggle" onclick="togglePassword('confirm-password')" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer;">👁️</button>
+              </div>
+            </div>
+            
+            <button id="change-password-btn" class="modern-btn cosmic-btn" style="margin-top: 15px;">
+              🔐 Passwort ändern
+            </button>
+          </div>
+          
+          <button id="save-profile-btn" class="modern-btn cosmic-btn" style="margin-top: 20px;">
             💾 Profil speichern
           </button>
         </div>
@@ -218,10 +243,55 @@
           </div>
         </div>
       </div>
+      
+      <!-- Admin Section -->
+      <div id="admin-section" class="content-section">
+        <div class="loading">👑 Lade Admin-Panel...</div>
+      </div>
     </div>
   </div>
   
   <!-- Notification Container -->
   <div id="notification-container" class="notification-container"></div>
+
+  <script>
+    // Hilfsfunktion für Passwort-Sichtbarkeit
+    function togglePassword(inputId) {
+      const input = document.getElementById(inputId);
+      const button = input.parentElement.querySelector('.password-toggle');
+      
+      if (input.type === 'password') {
+        input.type = 'text';
+        button.textContent = '🙈';
+      } else {
+        input.type = 'password';
+        button.textContent = '👁️';
+      }
+    }
+    
+    // Event Listener für Passwort ändern
+    document.addEventListener('DOMContentLoaded', function() {
+      const changePasswordBtn = document.getElementById('change-password-btn');
+      if (changePasswordBtn) {
+        changePasswordBtn.addEventListener('click', function() {
+          if (typeof changePassword === 'function') {
+            changePassword();
+          } else {
+            showNotification('❌ Passwort-Änderungsfunktion nicht verfügbar', 'error');
+          }
+        });
+      }
+      
+      // Enter-Taste für Passwort-Änderung
+      const confirmPasswordInput = document.getElementById('confirm-password');
+      if (confirmPasswordInput) {
+        confirmPasswordInput.addEventListener('keypress', function(e) {
+          if (e.key === 'Enter' && typeof changePassword === 'function') {
+            changePassword();
+          }
+        });
+      }
+    });
+  </script>
 </body>
 </html>
