@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Samenroulette - Dashboard</title>
+    <link rel="stylesheet" href="style/main.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="header">
+            <div class="logo">
+                <i class="fas fa-seedling"></i>
+                <h2>Samenroulette</h2>
+            </div>
+            <div class="user-info">
+                <div class="chips-display">
+                    <i class="fas fa-coins"></i>
+                    <span id="user-chips">10.000</span>
+                </div>
+                <button class="logout-btn" id="logout-btn">
+                    <i class="fas fa-sign-out-alt"></i>
+                </button>
+            </div>
+        </header>
+
+        <!-- Sidebar -->
+        <nav class="sidebar">
+            <div class="user-profile">
+                <img id="user-avatar" src="https://ui-avatars.com/api/?name=User&background=00ff88&color=000" alt="Avatar">
+                <h3 id="user-name">Benutzer</h3>
+                <div class="level-badge">
+                    <i class="fas fa-crown"></i>
+                    <span>Level 1</span>
+                </div>
+            </div>
+            
+            <ul class="nav-menu">
+                <li class="nav-item active">
+                    <a href="dashboard.html">
+                        <i class="fas fa-home"></i>
+                        <span>Dashboard</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="game.html">
+                        <i class="fas fa-dice"></i>
+                        <span>Spielen</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="friends.html">
+                        <i class="fas fa-user-friends"></i>
+                        <span>Freunde</span>
+                        <span class="badge" id="friends-count">0</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="profile.html">
+                        <i class="fas fa-user"></i>
+                        <span>Profil</span>
+                    </a>
+                </li>
+            </ul>
+            
+            <div class="bonus-timer">
+                <h4><i class="fas fa-gift"></i> Nächster Bonus</h4>
+                <div id="bonus-timer">10:00</div>
+            </div>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <div class="welcome-section">
+                <h1>Willkommen, <span id="welcome-name">Spieler</span>!</h1>
+                <p class="subtitle">Dein aktueller Kontostand: <strong id="total-chips">10.000</strong> Chips</p>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="quick-actions">
+                <h2>Schnellzugriff</h2>
+                <div class="actions-grid">
+                    <button class="action-btn" onclick="window.location.href='game.html'">
+                        <i class="fas fa-play-circle"></i>
+                        <span>Sofort Spielen</span>
+                    </button>
+                    <button class="action-btn" id="daily-bonus-btn">
+                        <i class="fas fa-gift"></i>
+                        <span>Täglicher Bonus</span>
+                    </button>
+                    <button class="action-btn" onclick="window.location.href='friends.html'">
+                        <i class="fas fa-user-plus"></i>
+                        <span>Freunde finden</span>
+                    </button>
+                    <button class="action-btn" onclick="window.location.href='game.html?mode=private'">
+                        <i class="fas fa-lock"></i>
+                        <span>Privater Tisch</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Stats -->
+            <div class="stats-bar">
+                <div class="stat">
+                    <i class="fas fa-trophy"></i>
+                    <div>
+                        <div class="stat-value" id="games-won">0</div>
+                        <div class="stat-label">Gewonnene Spiele</div>
+                    </div>
+                </div>
+                <div class="stat">
+                    <i class="fas fa-chart-line"></i>
+                    <div>
+                        <div class="stat-value" id="win-rate">0%</div>
+                        <div class="stat-label">Gewinnquote</div>
+                    </div>
+                </div>
+                <div class="stat">
+                    <i class="fas fa-fire"></i>
+                    <div>
+                        <div class="stat-value" id="win-streak">0</div>
+                        <div class="stat-label">Siegesserie</div>
+                    </div>
+                </div>
+                <div class="stat">
+                    <i class="fas fa-ranking-star"></i>
+                    <div>
+                        <div class="stat-value" id="user-rank">#1</div>
+                        <div class="stat-label">Rang</div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Right Sidebar -->
+        <aside class="right-sidebar">
+            <div class="top-players">
+                <h3><i class="fas fa-crown"></i> Top Spieler</h3>
+                <div class="players-list" id="top-players">
+                    <div class="loading">Lade Top-Spieler...</div>
+                </div>
+            </div>
+        </aside>
+    </div>
+
+    <!-- Firebase und Module -->
+    <script type="module" src="js/config/firebase.js"></script>
+    <script type="module" src="js/modules/user.js"></script>
+</body>
+</html>

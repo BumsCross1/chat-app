@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="de">
+<!-- index.html -->
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Samenroulette - Login</title>
+    <link rel="stylesheet" href="style/auth.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+
+<body>
+    <div class="container">
+        <div class="logo-header">
+            <div class="logo">
+                <i class="fas fa-seedling"></i>
+                <h1>Samenroulette</h1>
+            </div>
+            <p class="tagline">Das ultimative Roulette-Erlebnis</p>
+        </div>
+
+        <div class="auth-card">
+            <div class="tabs">
+                <button class="tab active" data-tab="login">Login</button>
+                <button class="tab" data-tab="register">Register</button>
+            </div>
+
+            <div class="tab-content" id="login-tab">
+                <div class="input-group">
+                    <i class="fas fa-envelope"></i>
+                    <input type="email" id="login-email" placeholder="E-Mail" required>
+                </div>
+                <div class="input-group">
+                    <i class="fas fa-lock"></i>
+                    <input type="password" id="login-password" placeholder="Passwort" required>
+                </div>
+                <button class="btn-primary" id="login-btn">Einloggen</button>
+            </div>
+
+            <div class="tab-content hidden" id="register-tab">
+                <div class="input-group">
+                    <i class="fas fa-user"></i>
+                    <input type="text" id="register-username" placeholder="Benutzername" required>
+                </div>
+                <div class="input-group">
+                    <i class="fas fa-envelope"></i>
+                    <input type="email" id="register-email" placeholder="E-Mail" required>
+                </div>
+                <div class="input-group">
+                    <i class="fas fa-lock"></i>
+                    <input type="password" id="register-password" placeholder="Passwort" required>
+                </div>
+                <button class="btn-primary" id="register-btn">Registrieren</button>
+            </div>
+
+            <div id="error-msg" class="error-message"></div>
+        </div>
+
+        <div class="features">
+            <div class="feature">
+                <i class="fas fa-users"></i>
+                <span>Mit Freunden spielen</span>
+            </div>
+            <div class="feature">
+                <i class="fas fa-coins"></i>
+                <span>10.000 Start-Chips</span>
+            </div>
+            <div class="feature">
+                <i class="fas fa-crown"></i>
+                <span>Live Multiplayer</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- JETZT als Module importieren -->
+    <script type="module" src="js/config/firebase.js"></script>
+    <script type="module" src="js/modules/auth.js"></script>
+</body>
+</html>
