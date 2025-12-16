@@ -1,139 +1,157 @@
+import { 
+    auth, database, onAuthStateChanged, signOut,
+    ref, get, update, set, push, queryData, onValue, off
+} from '../config/firebase.js';
+
 let currentUser = null;
 let userData = null;
-let bonusInterval;
-let chatListener;
+let bonusInterval = null;
+let chatListener = null;
+let notificationsListener = null;
+let topPlayersListener = null;
 
 document.addEventListener('DOMContentLoaded', () => {
-    // Check authentication
-    auth.onAuthStateChanged(async (user) => {
+    onAuthStateChanged(auth, async (user) => {
         if (!user) {
             window.location.href = 'index.html';
             return;
         }
         
         currentUser = user;
-        await loadUserData();
-        startBonusTimer();
-        loadActiveTables();
-        loadRecentGames();
-        loadTopPlayers();
-        loadFriendsActivity();
-        setupGlobalChat();
-        loadNotifications();
+        await initializeDashboard();
+        setupEventListeners();
         
-        // Update user chips every 30 seconds
-        setInterval(loadUserData, 30000);
+        // Regelmäßige Updates
+        setInterval(() => updateUI(), 30000);
     });
-
-    // Logout button
-    document.getElementById('logout-btn')?.addEventListener('click', () => {
-        auth.signOut().then(() => {
-            window.location.href = 'index.html';
-        });
-    });
-
-    // Daily bonus button
-    document.getElementById('daily-bonus-btn')?.addEventListener('click', claimDailyBonus);
 });
+
+async function initializeDashboard() {
+    await loadUserData();
+    startBonusTimer();
+    loadActiveTables();
+    loadRecentGames();
+    loadTopPlayers();
+    loadFriendsActivity();
+    setupGlobalChat();
+    loadNotifications();
+    checkDailyBonus();
+}
 
 async function loadUserData() {
     try {
-        const userDoc = await db.collection('users').doc(currentUser.uid).get();
-        if (userDoc.exists) {
-            userData = userDoc.data();
-            
-            // Update UI
-            document.getElementById('user-name').textContent = userData.username || 'Spieler';
-            document.getElementById('welcome-name').textContent = userData.username || 'Spieler';
-            document.getElementById('user-chips').textContent = formatNumber(userData.chips || 0);
-            document.getElementById('total-chips').textContent = formatNumber(userData.chips || 0);
-            
-            // Update avatar
-            if (userData.profileImage) {
-                document.getElementById('user-avatar').src = userData.profileImage;
-            } else {
-                const name = userData.username || 'User';
-                document.getElementById('user-avatar').src = `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=00ff88&color=000`;
-            }
-            
-            // Calculate and display stats
+        const userSnapshot = await get(ref(database, 'users/' + currentUser.uid));
+        
+        if (userSnapshot.exists()) {
+            userData = userSnapshot.val();
+            updateUI();
             calculateUserStats();
-            
-            // Update friend count
-            updateFriendCount();
-            
-            // Check for daily bonus
-            checkDailyBonus();
+            saveLocalData();
         } else {
-            // Create user document if it doesn't exist
-            await db.collection('users').doc(currentUser.uid).set({
-                username: currentUser.email.split('@')[0],
-                email: currentUser.email,
-                chips: 10000,
-                level: 1,
-                xp: 0,
-                gamesPlayed: 0,
-                gamesWon: 0,
-                totalWinnings: 0,
-                friendCount: 0,
-                createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-                lastLogin: firebase.firestore.FieldValue.serverTimestamp(),
-                lastDailyBonus: null,
-                lastBonusTime: Date.now()
-            });
-            
-            loadUserData(); // Reload after creation
+            await createNewUser();
         }
     } catch (error) {
-        console.error('Error loading user data:', error);
-        showNotification('Fehler beim Laden der Daten', 'error');
+        console.error('Fehler beim Laden:', error);
+        loadLocalData();
     }
+}
+
+async function createNewUser() {
+    const defaultData = {
+        uid: currentUser.uid,
+        username: currentUser.email?.split('@')[0] || 'Spieler',
+        email: currentUser.email,
+        chips: 10000,
+        level: 1,
+        xp: 0,
+        gamesPlayed: 0,
+        gamesWon: 0,
+        totalWinnings: 0,
+        friendCount: 0,
+        profileImage: `https://ui-avatars.com/api/?name=${encodeURIComponent(currentUser.email?.split('@')[0] || 'User')}&background=00ff88&color=000&size=128`,
+        createdAt: Date.now(),
+        lastLogin: Date.now(),
+        lastDailyBonus: null,
+        lastBonusTime: Date.now(),
+        winStreak: 0,
+        highestWin: 0,
+        achievements: []
+    };
+    
+    await Promise.all([
+        set(ref(database, 'users/' + currentUser.uid), defaultData),
+        set(ref(database, 'usernames/' + defaultData.username.toLowerCase()), {
+            uid: currentUser.uid,
+            createdAt: Date.now()
+        })
+    ]);
+    
+    userData = defaultData;
+    updateUI();
+    showNotification('Neues Profil erstellt!', 'success');
+}
+
+function updateUI() {
+    if (!userData) return;
+    
+    // Update all UI elements
+    updateElement('user-name', userData.username);
+    updateElement('welcome-name', userData.username);
+    updateElement('user-chips', formatNumber(userData.chips));
+    updateElement('total-chips', formatNumber(userData.chips));
+    
+    const avatar = document.getElementById('user-avatar');
+    if (avatar) {
+        avatar.src = userData.profileImage || getDefaultAvatar(userData.username);
+        avatar.onerror = () => {
+            avatar.src = getDefaultAvatar(userData.username);
+        };
+    }
+    
+    // Update level badge
+    const level = Math.floor((userData.xp || 0) / 1000) + 1;
+    const levelBadge = document.querySelector('.level-badge span');
+    if (levelBadge) levelBadge.textContent = `Level ${level}`;
 }
 
 function calculateUserStats() {
+    if (!userData) return;
+    
     const gamesPlayed = userData.gamesPlayed || 0;
     const gamesWon = userData.gamesWon || 0;
-    const winStreak = userData.winStreak || 0;
-    
-    document.getElementById('games-won').textContent = gamesWon;
-    document.getElementById('win-streak').textContent = winStreak;
-    
-    // Calculate win rate
     const winRate = gamesPlayed > 0 ? Math.round((gamesWon / gamesPlayed) * 100) : 0;
-    document.getElementById('win-rate').textContent = `${winRate}%`;
     
-    // Calculate level based on XP
-    const xp = userData.xp || 0;
-    const level = Math.floor(xp / 1000) + 1;
-    document.getElementById('user-level').textContent = level;
+    updateElement('games-won', gamesWon);
+    updateElement('win-streak', userData.winStreak || 0);
+    updateElement('win-rate', `${winRate}%`);
+    updateElement('user-rank', calculateRank(userData.chips));
+    updateElement('friend-count', userData.friendCount || 0);
 }
 
-async function updateFriendCount() {
-    try {
-        const friendsSnapshot = await db.collection('friends')
-            .where('users', 'array-contains', currentUser.uid)
-            .get();
-        
-        const count = friendsSnapshot.size;
-        document.getElementById('friend-count').textContent = count;
-        userData.friendCount = count;
-    } catch (error) {
-        console.error('Error loading friend count:', error);
-    }
+function calculateRank(chips) {
+    if (chips > 100000) return '#1';
+    if (chips > 50000) return '#2';
+    if (chips > 25000) return '#3';
+    if (chips > 10000) return '#4';
+    if (chips > 5000) return '#5';
+    return `#${Math.floor(chips / 1000) || 1}`;
 }
 
 function startBonusTimer() {
-    let timeLeft = 600; // 10 minutes in seconds
+    if (bonusInterval) clearInterval(bonusInterval);
+    
+    let timeLeft = 600;
+    const timerElement = document.getElementById('bonus-timer');
+    if (!timerElement) return;
     
     function updateTimer() {
         const minutes = Math.floor(timeLeft / 60);
         const seconds = timeLeft % 60;
-        document.getElementById('bonus-timer').textContent = 
-            `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        timerElement.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
         
         if (timeLeft <= 0) {
             grantBonusChips();
-            timeLeft = 600; // Reset to 10 minutes
+            timeLeft = 600;
         } else {
             timeLeft--;
         }
@@ -148,38 +166,45 @@ async function grantBonusChips() {
         const bonusAmount = 250;
         const newChips = (userData.chips || 0) + bonusAmount;
         
-        await db.collection('users').doc(currentUser.uid).update({
+        userData.chips = newChips;
+        userData.lastBonusTime = Date.now();
+        
+        updateChipsDisplay(newChips);
+        
+        await update(ref(database, 'users/' + currentUser.uid), {
             chips: newChips,
             lastBonusTime: Date.now()
         });
         
-        userData.chips = newChips;
-        document.getElementById('user-chips').textContent = formatNumber(newChips);
-        document.getElementById('total-chips').textContent = formatNumber(newChips);
+        await addNotification('bonus', `+${bonusAmount} Bonus-Chips erhalten!`);
+        showNotification(`🎁 +${bonusAmount} Bonus-Chips!`, 'success');
         
-        // Add notification
-        addNotification('bonus', `+${bonusAmount} Bonus-Chips erhalten!`);
-        showNotification(`Du hast ${bonusAmount} Bonus-Chips erhalten!`, 'success');
-        
-        // Log bonus transaction
-        await db.collection('transactions').add({
+        await push(ref(database, 'transactions'), {
             userId: currentUser.uid,
             type: 'bonus',
             amount: bonusAmount,
             timestamp: Date.now()
         });
+        
     } catch (error) {
-        console.error('Error granting bonus chips:', error);
+        console.error('Bonus-Fehler:', error);
+        showNotification('Bonus konnte nicht vergeben werden', 'error');
     }
 }
 
-async function checkDailyBonus() {
-    const today = new Date().toDateString();
-    const lastBonus = userData.lastDailyBonus;
+function checkDailyBonus() {
+    if (!userData) return;
     
-    if (lastBonus && new Date(lastBonus.seconds * 1000).toDateString() === today) {
-        document.getElementById('daily-bonus-btn').disabled = true;
-        document.getElementById('daily-bonus-btn').innerHTML = '<i class="fas fa-check"></i><span>Täglicher Bonus bereits abgeholt</span>';
+    const dailyBonusBtn = document.getElementById('daily-bonus-btn');
+    if (!dailyBonusBtn) return;
+    
+    const today = new Date().toDateString();
+    const lastBonus = userData.lastDailyBonus ? new Date(userData.lastDailyBonus).toDateString() : null;
+    
+    if (lastBonus === today) {
+        dailyBonusBtn.disabled = true;
+        dailyBonusBtn.innerHTML = '<i class="fas fa-check-circle"></i> Bonus bereits abgeholt';
+        dailyBonusBtn.classList.add('disabled');
     }
 }
 
@@ -188,197 +213,273 @@ async function claimDailyBonus() {
         const today = new Date().toDateString();
         const lastBonus = userData.lastDailyBonus;
         
-        if (lastBonus && new Date(lastBonus.seconds * 1000).toDateString() === today) {
-            showNotification('Täglicher Bonus wurde bereits abgeholt!', 'warning');
+        if (lastBonus && new Date(lastBonus).toDateString() === today) {
+            showNotification('Bonus wurde bereits heute abgeholt!', 'warning');
             return;
         }
         
-        // Daily bonus: 1000 chips
         const bonusAmount = 1000;
         const newChips = (userData.chips || 0) + bonusAmount;
         
-        await db.collection('users').doc(currentUser.uid).update({
+        userData.chips = newChips;
+        userData.lastDailyBonus = Date.now();
+        
+        updateChipsDisplay(newChips);
+        
+        const dailyBonusBtn = document.getElementById('daily-bonus-btn');
+        if (dailyBonusBtn) {
+            dailyBonusBtn.disabled = true;
+            dailyBonusBtn.innerHTML = '<i class="fas fa-check-circle"></i> Bonus abgeholt';
+            dailyBonusBtn.classList.add('disabled');
+        }
+        
+        await update(ref(database, 'users/' + currentUser.uid), {
             chips: newChips,
-            lastDailyBonus: firebase.firestore.FieldValue.serverTimestamp()
+            lastDailyBonus: Date.now()
         });
         
-        userData.chips = newChips;
-        document.getElementById('user-chips').textContent = formatNumber(newChips);
-        document.getElementById('total-chips').textContent = formatNumber(newChips);
+        await addNotification('daily_bonus', `+${bonusAmount} tägliche Bonus-Chips!`);
+        showNotification(`🎉 Täglicher Bonus: ${bonusAmount} Chips!`, 'success');
         
-        // Update button
-        document.getElementById('daily-bonus-btn').disabled = true;
-        document.getElementById('daily-bonus-btn').innerHTML = '<i class="fas fa-check"></i><span>Täglicher Bonus abgeholt</span>';
-        
-        addNotification('daily_bonus', `+${bonusAmount} tägliche Bonus-Chips!`);
-        showNotification(`Täglicher Bonus: ${bonusAmount} Chips erhalten!`, 'success');
-        
-        // Log transaction
-        await db.collection('transactions').add({
+        await push(ref(database, 'transactions'), {
             userId: currentUser.uid,
             type: 'daily_bonus',
             amount: bonusAmount,
             timestamp: Date.now()
         });
+        
     } catch (error) {
-        console.error('Error claiming daily bonus:', error);
-        showNotification('Fehler beim Abholen des täglichen Bonus', 'error');
+        console.error('Daily Bonus Fehler:', error);
+        showNotification('Fehler beim Bonus', 'error');
     }
 }
 
+// Load Active Tables
 async function loadActiveTables() {
     try {
-        const tablesSnapshot = await db.collection('tables')
-            .where('status', '==', 'active')
-            .where('isPrivate', '==', false)
-            .limit(6)
-            .get();
+        const tablesRef = queryData('tables', 'status', {key: 'status', value: 'waiting'});
+        const snapshot = await get(tablesRef);
+        const container = document.getElementById('active-tables');
+        if (!container) return;
         
-        const tablesContainer = document.getElementById('active-tables');
-        tablesContainer.innerHTML = '';
+        container.innerHTML = '';
         
-        if (tablesSnapshot.empty) {
-            tablesContainer.innerHTML = '<div class="no-data">Keine aktiven Tische verfügbar</div>';
+        if (!snapshot.exists()) {
+            container.innerHTML = '<div class="no-data"><i class="fas fa-table"></i> Keine aktiven Tische</div>';
             return;
         }
         
-        tablesSnapshot.forEach(doc => {
-            const table = doc.data();
-            const tableElement = createTableCard(table, doc.id);
-            tablesContainer.appendChild(tableElement);
+        const tables = [];
+        snapshot.forEach(child => {
+            const table = child.val();
+            if (!table.isPrivate) {
+                tables.push({ id: child.key, ...table });
+            }
         });
+        
+        if (tables.length === 0) {
+            container.innerHTML = '<div class="no-data"><i class="fas fa-table"></i> Alle Tische sind privat</div>';
+            return;
+        }
+        
+        tables.forEach(table => {
+            container.appendChild(createTableCard(table));
+        });
+        
     } catch (error) {
-        console.error('Error loading active tables:', error);
+        console.error('Tabellen-Fehler:', error);
     }
 }
 
-function createTableCard(table, tableId) {
+function createTableCard(table) {
     const div = document.createElement('div');
     div.className = 'table-card';
     div.innerHTML = `
         <div class="table-header">
-            <h4>${table.name || 'Unbenannter Tisch'}</h4>
-            <span class="players-count">${table.players ? table.players.length : 0}/${table.maxPlayers || 4}</span>
+            <h4><i class="fas fa-dice"></i> ${table.name || 'Roulette Tisch'}</h4>
+            <span class="players-count">
+                <i class="fas fa-users"></i>
+                ${table.players ? Object.keys(table.players).length : 0}/${table.maxPlayers || 6}
+            </span>
         </div>
         <div class="table-info">
             <div class="table-detail">
-                <i class="fas fa-user"></i>
-                <span>Besitzer: ${table.ownerName || 'Unbekannt'}</span>
+                <i class="fas fa-user-crown"></i>
+                <span>${table.ownerName || 'Unbekannt'}</span>
             </div>
             <div class="table-detail">
                 <i class="fas fa-coins"></i>
-                <span>Min. Einsatz: ${table.minBet || 10}</span>
+                <span>Min: ${formatNumber(table.minBet || 10)} Chips</span>
             </div>
             <div class="table-detail">
                 <i class="fas fa-clock"></i>
-                <span>Runde: ${table.currentRound || 1}</span>
+                <span>Erstellt: ${formatTime(table.createdAt)}</span>
             </div>
         </div>
-        <button class="btn-join" onclick="joinTable('${tableId}')">Beitreten</button>
+        <button class="btn-join" onclick="joinTable('${table.id}')">
+            <i class="fas fa-door-open"></i> Beitreten
+        </button>
     `;
-    
     return div;
 }
 
-async function joinTable(tableId) {
+window.joinTable = async function(tableId) {
     try {
-        const tableDoc = await db.collection('tables').doc(tableId).get();
-        if (!tableDoc.exists) {
+        const tableRef = ref(database, 'tables/' + tableId);
+        const snapshot = await get(tableRef);
+        
+        if (!snapshot.exists()) {
             showNotification('Tisch nicht gefunden', 'error');
             return;
         }
         
-        const table = tableDoc.data();
-        if (table.players && table.players.length >= table.maxPlayers) {
-            showNotification('Tisch ist bereits voll', 'warning');
+        const table = snapshot.val();
+        const players = table.players || {};
+        
+        if (Object.keys(players).length >= (table.maxPlayers || 6)) {
+            showNotification('Tisch ist voll!', 'warning');
             return;
         }
         
-        window.location.href = `game.html?table=${tableId}`;
+        if (players[currentUser.uid]) {
+            showNotification('Du bist bereits an diesem Tisch', 'info');
+            return;
+        }
+        
+        // Add player to table
+        players[currentUser.uid] = {
+            name: userData.username,
+            chips: userData.chips,
+            joinedAt: Date.now(),
+            avatar: userData.profileImage
+        };
+        
+        await update(tableRef, {
+            players: players,
+            playerCount: Object.keys(players).length
+        });
+        
+        showNotification('Tisch beigetreten!', 'success');
+        setTimeout(() => {
+            window.location.href = `game.html?table=${tableId}`;
+        }, 1000);
+        
     } catch (error) {
-        console.error('Error joining table:', error);
+        console.error('Beitritts-Fehler:', error);
         showNotification('Fehler beim Beitritt', 'error');
     }
-}
+};
 
+// Load Recent Games
 async function loadRecentGames() {
     try {
-        const gamesSnapshot = await db.collection('games')
-            .where('players', 'array-contains', currentUser.uid)
-            .orderBy('endedAt', 'desc')
-            .limit(5)
-            .get();
+        const gamesRef = ref(database, 'games');
+        const snapshot = await get(gamesRef);
+        const container = document.getElementById('recent-games');
+        if (!container) return;
         
-        const gamesContainer = document.getElementById('recent-games');
-        gamesContainer.innerHTML = '';
+        container.innerHTML = '';
         
-        if (gamesSnapshot.empty) {
-            gamesContainer.innerHTML = '<div class="no-data">Noch keine Spiele gespielt</div>';
+        if (!snapshot.exists()) {
+            container.innerHTML = '<div class="no-data"><i class="fas fa-history"></i> Noch keine Spiele</div>';
             return;
         }
         
-        gamesSnapshot.forEach(doc => {
-            const game = doc.data();
-            const gameElement = createGameHistoryItem(game, doc.id);
-            gamesContainer.appendChild(gameElement);
+        const games = [];
+        snapshot.forEach(child => {
+            const game = child.val();
+            if (game.players && game.players[currentUser.uid]) {
+                games.push({ id: child.key, ...game });
+            }
         });
+        
+        games.sort((a, b) => (b.endedAt || 0) - (a.endedAt || 0));
+        
+        const recentGames = games.slice(0, 5);
+        
+        if (recentGames.length === 0) {
+            container.innerHTML = '<div class="no-data"><i class="fas fa-history"></i> Noch keine Spiele</div>';
+            return;
+        }
+        
+        recentGames.forEach(game => {
+            container.appendChild(createGameHistoryItem(game));
+        });
+        
     } catch (error) {
-        console.error('Error loading recent games:', error);
+        console.error('Spiele-Fehler:', error);
     }
 }
 
-function createGameHistoryItem(game, gameId) {
+function createGameHistoryItem(game) {
     const div = document.createElement('div');
     div.className = 'game-history-item';
     
-    const result = game.winner === currentUser.uid ? 'win' : 'loss';
-    const resultText = result === 'win' ? 'Gewonnen' : 'Verloren';
-    const resultClass = result === 'win' ? 'result-win' : 'result-loss';
-    const resultIcon = result === 'win' ? 'fa-trophy' : 'fa-times';
-    
-    const profit = game.profits ? (game.profits[currentUser.uid] || 0) : 0;
-    const profitText = profit > 0 ? `+${profit}` : profit;
+    const profit = game.profits?.[currentUser.uid] || 0;
+    const result = profit > 0 ? 'win' : (profit < 0 ? 'loss' : 'draw');
     
     div.innerHTML = `
         <div class="game-info">
-            <div class="game-mode">${game.mode || 'Solo'}</div>
-            <div class="game-time">${formatTime(game.endedAt?.seconds * 1000 || Date.now())}</div>
+            <div class="game-mode">
+                <i class="fas fa-${game.mode === 'multiplayer' ? 'users' : 'user'}"></i>
+                ${game.mode === 'multiplayer' ? 'Multiplayer' : 'Solo'}
+            </div>
+            <div class="game-time">${formatTime(game.endedAt)}</div>
         </div>
         <div class="game-result">
-            <div class="result ${resultClass}">
-                <i class="fas ${resultIcon}"></i>
-                <span>${resultText}</span>
+            <div class="result result-${result}">
+                <i class="fas fa-${result === 'win' ? 'trophy' : result === 'loss' ? 'times' : 'equals'}"></i>
+                <span>${result === 'win' ? 'Gewonnen' : result === 'loss' ? 'Verloren' : 'Unentschieden'}</span>
             </div>
-            <div class="game-profit ${profit > 0 ? 'profit-positive' : 'profit-negative'}">
-                ${profitText} Chips
+            <div class="game-profit ${profit > 0 ? 'profit-positive' : profit < 0 ? 'profit-negative' : 'profit-neutral'}">
+                ${profit > 0 ? '+' : ''}${formatNumber(profit)} Chips
             </div>
         </div>
     `;
-    
     return div;
 }
 
+// Load Top Players
 async function loadTopPlayers() {
     try {
-        const playersSnapshot = await db.collection('users')
-            .orderBy('chips', 'desc')
-            .limit(10)
-            .get();
+        const usersRef = ref(database, 'users');
         
-        const playersContainer = document.getElementById('top-players');
-        playersContainer.innerHTML = '';
+        if (topPlayersListener) off(usersRef, topPlayersListener);
         
-        playersSnapshot.forEach((doc, index) => {
-            const player = doc.data();
-            const playerElement = createTopPlayerItem(player, doc.id, index + 1);
-            playersContainer.appendChild(playerElement);
+        topPlayersListener = onValue(usersRef, (snapshot) => {
+            const container = document.getElementById('top-players');
+            if (!container) return;
+            
+            container.innerHTML = '';
+            
+            if (!snapshot.exists()) {
+                container.innerHTML = '<div class="no-data">Keine Spieler gefunden</div>';
+                return;
+            }
+            
+            const players = [];
+            snapshot.forEach(child => {
+                const player = child.val();
+                if (player.chips !== undefined) {
+                    players.push({ id: child.key, ...player });
+                }
+            });
+            
+            players.sort((a, b) => (b.chips || 0) - (a.chips || 0));
+            
+            const top10 = players.slice(0, 10);
+            
+            top10.forEach((player, index) => {
+                container.appendChild(createTopPlayerItem(player, index + 1));
+            });
         });
+        
     } catch (error) {
-        console.error('Error loading top players:', error);
+        console.error('Top-Spieler-Fehler:', error);
     }
 }
 
-function createTopPlayerItem(player, playerId, rank) {
+function createTopPlayerItem(player, rank) {
     const div = document.createElement('div');
     div.className = 'player-item';
     
@@ -387,326 +488,369 @@ function createTopPlayerItem(player, playerId, rank) {
     else if (rank === 2) rankClass = 'rank-silver';
     else if (rank === 3) rankClass = 'rank-bronze';
     
+    const isCurrentUser = player.id === currentUser.uid;
+    
     div.innerHTML = `
         <div class="player-rank ${rankClass}">${rank}</div>
-        <img src="${player.profileImage || `https://ui-avatars.com/api/?name=${encodeURIComponent(player.username || 'User')}&background=00ff88&color=000`}" 
-             alt="Avatar" class="player-avatar">
+        <img src="${player.profileImage || getDefaultAvatar(player.username)}" 
+             alt="${player.username}" class="player-avatar ${isCurrentUser ? 'current-user' : ''}">
         <div class="player-details">
-            <div class="player-name">${player.username || 'Unbekannt'}</div>
+            <div class="player-name">
+                ${player.username || 'Unbekannt'}
+                ${isCurrentUser ? ' (Du)' : ''}
+            </div>
             <div class="player-stats">
-                <span class="player-chips">${formatNumber(player.chips || 0)} Chips</span>
-                <span class="player-level">Level ${Math.floor((player.xp || 0) / 1000) + 1}</span>
+                <span class="player-chips">
+                    <i class="fas fa-coins"></i>
+                    ${formatNumber(player.chips || 0)} Chips
+                </span>
+                <span class="player-level">
+                    <i class="fas fa-trophy"></i>
+                    Level ${Math.floor((player.xp || 0) / 1000) + 1}
+                </span>
             </div>
         </div>
     `;
-    
     return div;
 }
 
+// Friend Functions
 async function loadFriendsActivity() {
     try {
-        // First get friends list
-        const friendsSnapshot = await db.collection('friends')
-            .where('users', 'array-contains', currentUser.uid)
-            .get();
+        // This is a placeholder - implement actual friend system
+        const container = document.getElementById('friends-activity');
+        if (!container) return;
         
-        const friendsContainer = document.getElementById('friends-activity');
-        friendsContainer.innerHTML = '';
+        container.innerHTML = `
+            <div class="friends-info">
+                <i class="fas fa-user-friends"></i>
+                <p>Besuche den Freunde-Bereich, um Freunde hinzuzufügen und ihre Aktivitäten zu sehen!</p>
+                <button class="btn-action small" onclick="window.location.href='friends.html'">
+                    <i class="fas fa-user-plus"></i> Zu Freunden
+                </button>
+            </div>
+        `;
         
-        if (friendsSnapshot.empty) {
-            friendsContainer.innerHTML = '<div class="no-data">Füge Freunde hinzu, um ihre Aktivitäten zu sehen</div>';
-            return;
-        }
-        
-        // Get friend IDs
-        const friendIds = [];
-        friendsSnapshot.forEach(doc => {
-            const users = doc.data().users;
-            const friendId = users.find(id => id !== currentUser.uid);
-            if (friendId) friendIds.push(friendId);
-        });
-        
-        if (friendIds.length === 0) {
-            friendsContainer.innerHTML = '<div class="no-data">Keine Freundesaktivitäten</div>';
-            return;
-        }
-        
-        // Get recent games of friends
-        const gamesSnapshot = await db.collection('games')
-            .where('players', 'in', [friendIds])
-            .orderBy('endedAt', 'desc')
-            .limit(5)
-            .get();
-        
-        if (gamesSnapshot.empty) {
-            friendsContainer.innerHTML = '<div class="no-data">Deine Freunde haben noch nicht gespielt</div>';
-            return;
-        }
-        
-        // Get user data for friend names
-        const userPromises = friendIds.map(id => db.collection('users').doc(id).get());
-        const userDocs = await Promise.all(userPromises);
-        const usersMap = {};
-        userDocs.forEach(doc => {
-            if (doc.exists) {
-                usersMap[doc.id] = doc.data();
-            }
-        });
-        
-        gamesSnapshot.forEach(doc => {
-            const game = doc.data();
-            const friendId = game.players.find(id => id !== currentUser.uid && friendIds.includes(id));
-            const friend = usersMap[friendId];
-            
-            if (friend) {
-                const activityElement = createFriendActivityItem(friend, game);
-                friendsContainer.appendChild(activityElement);
-            }
-        });
     } catch (error) {
-        console.error('Error loading friends activity:', error);
+        console.error('Freunde-Fehler:', error);
     }
 }
 
-function createFriendActivityItem(friend, game) {
-    const div = document.createElement('div');
-    div.className = 'friend-activity-item';
-    
-    const result = game.winner === friend.uid ? 'Gewonnen' : 'Verloren';
-    const profit = game.profits ? (game.profits[friend.uid] || 0) : 0;
-    
-    div.innerHTML = `
-        <img src="${friend.profileImage || `https://ui-avatars.com/api/?name=${encodeURIComponent(friend.username || 'Friend')}&background=00ff88&color=000`}" 
-             alt="Avatar" class="friend-avatar">
-        <div class="activity-details">
-            <div class="friend-name">${friend.username}</div>
-            <div class="activity-text">hat ${result.toLowerCase()} (${profit > 0 ? '+' : ''}${profit} Chips)</div>
-            <div class="activity-time">${formatTime(game.endedAt?.seconds * 1000 || Date.now())}</div>
-        </div>
-    `;
-    
-    return div;
-}
-
+// Chat Functions
 function setupGlobalChat() {
     const chatContainer = document.getElementById('global-chat');
+    if (!chatContainer) return;
     
-    // Listen for global chat messages
-    chatListener = db.collection('global_chat')
-        .orderBy('timestamp', 'desc')
-        .limit(20)
-        .onSnapshot(snapshot => {
-            chatContainer.innerHTML = '';
-            
-            const messages = [];
-            snapshot.forEach(doc => {
-                messages.push(doc.data());
-            });
-            
-            // Reverse to show newest at bottom
-            messages.reverse().forEach(message => {
-                const messageElement = createChatMessage(message);
-                chatContainer.appendChild(messageElement);
-            });
-            
-            // Scroll to bottom
-            chatContainer.scrollTop = chatContainer.scrollHeight;
-        }, error => {
-            console.error('Error listening to chat:', error);
+    if (chatListener) off(ref(database, 'global_chat'), chatListener);
+    
+    chatListener = onValue(ref(database, 'global_chat'), (snapshot) => {
+        chatContainer.innerHTML = '';
+        
+        if (!snapshot.exists()) {
+            chatContainer.innerHTML = '<div class="no-data">Keine Nachrichten</div>';
+            return;
+        }
+        
+        const messages = [];
+        snapshot.forEach(child => {
+            messages.push({ id: child.key, ...child.val() });
         });
+        
+        messages.sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
+        
+        const recentMessages = messages.slice(-15);
+        
+        recentMessages.forEach(msg => {
+            const msgElement = createChatMessage(msg);
+            chatContainer.appendChild(msgElement);
+        });
+        
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+    });
 }
 
-function createChatMessage(message) {
-    const div = document.createElement('div');
-    div.className = `message ${message.userId === currentUser.uid ? 'own' : ''}`;
-    
-    const time = new Date(message.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    
-    div.innerHTML = `
-        <div class="message-header">
-            <span class="message-sender">${message.username}</span>
-            <span class="message-time">${time}</span>
-        </div>
-        <div class="message-content">${message.text}</div>
-    `;
-    
-    return div;
-}
-
-async function sendGlobalMessage() {
+window.sendGlobalMessage = async function() {
     const input = document.getElementById('global-chat-input');
-    const text = input.value.trim();
+    if (!input) return;
     
-    if (!text) return;
+    const text = input.value.trim();
+    if (!text || text.length > 200) {
+        showNotification('Nachricht zu lang oder leer', 'warning');
+        return;
+    }
     
     try {
-        await db.collection('global_chat').add({
+        await push(ref(database, 'global_chat'), {
             userId: currentUser.uid,
             username: userData.username,
             text: text,
-            timestamp: Date.now()
+            timestamp: Date.now(),
+            avatar: userData.profileImage
         });
         
         input.value = '';
+        input.focus();
+        
     } catch (error) {
-        console.error('Error sending message:', error);
-        showNotification('Fehler beim Senden der Nachricht', 'error');
+        console.error('Chat-Fehler:', error);
+        showNotification('Nachricht konnte nicht gesendet werden', 'error');
     }
-}
+};
 
+// Notification Functions
 async function loadNotifications() {
     try {
-        const notificationsSnapshot = await db.collection('notifications')
-            .where('userId', '==', currentUser.uid)
-            .where('read', '==', false)
-            .orderBy('timestamp', 'desc')
-            .limit(10)
-            .get();
+        const notifRef = ref(database, `notifications/${currentUser.uid}`);
         
-        const notificationsContainer = document.getElementById('notifications-list');
-        notificationsContainer.innerHTML = '';
+        if (notificationsListener) off(notifRef, notificationsListener);
         
-        if (notificationsSnapshot.empty) {
-            notificationsContainer.innerHTML = '<div class="no-notifications">Keine neuen Benachrichtigungen</div>';
-            return;
-        }
-        
-        notificationsSnapshot.forEach(doc => {
-            const notification = doc.data();
-            const notificationElement = createNotificationItem(notification);
-            notificationsContainer.appendChild(notificationElement);
+        notificationsListener = onValue(notifRef, (snapshot) => {
+            const container = document.getElementById('notifications-list');
+            if (!container) return;
+            
+            container.innerHTML = '';
+            
+            if (!snapshot.exists()) {
+                container.innerHTML = '<div class="no-notifications">Keine Benachrichtigungen</div>';
+                return;
+            }
+            
+            const notifications = [];
+            snapshot.forEach(child => {
+                const notif = child.val();
+                if (!notif.read) {
+                    notifications.push({ id: child.key, ...notif });
+                }
+            });
+            
+            notifications.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+            
+            if (notifications.length === 0) {
+                container.innerHTML = '<div class="no-notifications">Keine neuen Benachrichtigungen</div>';
+                return;
+            }
+            
+            notifications.forEach(notif => {
+                container.appendChild(createNotificationItem(notif));
+            });
+            
+            // Update badge count
+            const badge = document.querySelector('.nav-item a[href="profile.html"] .badge');
+            if (badge) {
+                badge.textContent = notifications.length;
+                badge.style.display = notifications.length > 0 ? 'flex' : 'none';
+            }
         });
+        
     } catch (error) {
-        console.error('Error loading notifications:', error);
+        console.error('Benachrichtigungs-Fehler:', error);
     }
-}
-
-function createNotificationItem(notification) {
-    const div = document.createElement('div');
-    div.className = 'notification';
-    
-    let icon = 'fa-info-circle';
-    if (notification.type === 'friend_request') icon = 'fa-user-plus';
-    else if (notification.type === 'game_invite') icon = 'fa-gamepad';
-    else if (notification.type === 'bonus') icon = 'fa-gift';
-    else if (notification.type === 'level_up') icon = 'fa-trophy';
-    
-    div.innerHTML = `
-        <i class="fas ${icon}"></i>
-        <span>${notification.message}</span>
-    `;
-    
-    return div;
 }
 
 async function addNotification(type, message) {
     try {
-        await db.collection('notifications').add({
-            userId: currentUser.uid,
+        await push(ref(database, `notifications/${currentUser.uid}`), {
             type: type,
             message: message,
             read: false,
             timestamp: Date.now()
         });
     } catch (error) {
-        console.error('Error adding notification:', error);
+        console.error('Benachrichtigung hinzufügen fehlgeschlagen:', error);
     }
 }
 
-function showNotification(message, type = 'info') {
-    // Create notification element
-    const notification = document.createElement('div');
-    notification.className = `floating-notification ${type}`;
-    notification.innerHTML = `
-        <i class="fas ${type === 'success' ? 'fa-check-circle' : type === 'error' ? 'fa-exclamation-circle' : 'fa-info-circle'}"></i>
-        <span>${message}</span>
-    `;
-    
-    document.body.appendChild(notification);
-    
-    // Remove after 3 seconds
-    setTimeout(() => {
-        notification.style.opacity = '0';
-        setTimeout(() => {
-            if (notification.parentNode) {
-                notification.parentNode.removeChild(notification);
-            }
-        }, 300);
-    }, 3000);
+// Utility Functions
+function updateChipsDisplay(chips) {
+    updateElement('user-chips', formatNumber(chips));
+    updateElement('total-chips', formatNumber(chips));
 }
 
-function createQuickTable() {
-    openModal('create-table-modal');
-}
-
-async function createPrivateTable() {
-    const name = document.getElementById('table-name').value.trim() || 'Privater Tisch';
-    const password = document.getElementById('table-password').value.trim();
-    const maxPlayers = parseInt(document.getElementById('max-players').value);
-    const minBet = parseInt(document.getElementById('min-bet').value);
-    
-    try {
-        const tableId = generateTableId();
-        
-        await db.collection('tables').doc(tableId).set({
-            id: tableId,
-            name: name,
-            owner: currentUser.uid,
-            ownerName: userData.username,
-            players: [currentUser.uid],
-            maxPlayers: maxPlayers,
-            minBet: minBet,
-            isPrivate: password.length > 0,
-            password: password,
-            status: 'waiting',
-            currentRound: 0,
-            createdAt: Date.now(),
-            chat: []
-        });
-        
-        closeModal('create-table-modal');
-        showNotification('Privater Tisch erstellt!', 'success');
-        
-        // Redirect to the table
-        setTimeout(() => {
-            window.location.href = `game.html?table=${tableId}`;
-        }, 1000);
-        
-    } catch (error) {
-        console.error('Error creating table:', error);
-        showNotification('Fehler beim Erstellen des Tisches', 'error');
-    }
-}
-
-function generateTableId() {
-    return Math.random().toString(36).substr(2, 9).toUpperCase();
-}
-
-function openModal(modalId) {
-    document.getElementById(modalId).style.display = 'flex';
-}
-
-function closeModal(modalId) {
-    document.getElementById(modalId).style.display = 'none';
+function updateElement(id, value) {
+    const element = document.getElementById(id);
+    if (element) element.textContent = value;
 }
 
 function formatNumber(num) {
-    return num.toLocaleString('de-DE');
+    return new Intl.NumberFormat('de-DE').format(num || 0);
 }
 
 function formatTime(timestamp) {
+    if (!timestamp) return 'Vor kurzem';
+    
     const now = Date.now();
     const diff = now - timestamp;
     
     if (diff < 60000) return 'Gerade eben';
     if (diff < 3600000) return `${Math.floor(diff / 60000)} min`;
     if (diff < 86400000) return `${Math.floor(diff / 3600000)} h`;
+    if (diff < 604800000) return `${Math.floor(diff / 86400000)} T`;
     
-    return new Date(timestamp).toLocaleDateString('de-DE');
+    return new Date(timestamp).toLocaleDateString('de-DE', {
+        day: '2-digit',
+        month: '2-digit'
+    });
 }
 
-// Clean up on page unload
+function getDefaultAvatar(name) {
+    return `https://ui-avatars.com/api/?name=${encodeURIComponent(name || 'User')}&background=00ff88&color=000&bold=true&size=128`;
+}
+
+function showNotification(message, type = 'info') {
+    const notification = document.createElement('div');
+    notification.className = `floating-notification ${type}`;
+    
+    const icons = {
+        success: 'fa-check-circle',
+        error: 'fa-exclamation-circle',
+        warning: 'fa-exclamation-triangle',
+        info: 'fa-info-circle'
+    };
+    
+    notification.innerHTML = `
+        <i class="fas ${icons[type] || 'fa-info-circle'}"></i>
+        <span>${message}</span>
+        <button class="close-notif"><i class="fas fa-times"></i></button>
+    `;
+    
+    document.body.appendChild(notification);
+    
+    // Close button
+    notification.querySelector('.close-notif').addEventListener('click', () => {
+        notification.remove();
+    });
+    
+    // Auto remove after 5 seconds
+    setTimeout(() => {
+        if (notification.parentNode) {
+            notification.style.opacity = '0';
+            setTimeout(() => notification.remove(), 300);
+        }
+    }, 5000);
+}
+
+// Local Storage Functions
+function saveLocalData() {
+    try {
+        localStorage.setItem('userData', JSON.stringify(userData));
+        localStorage.setItem('lastSync', Date.now().toString());
+    } catch (e) {
+        console.error('Speichern lokal fehlgeschlagen:', e);
+    }
+}
+
+function loadLocalData() {
+    try {
+        const saved = localStorage.getItem('userData');
+        if (saved) {
+            userData = JSON.parse(saved);
+            updateUI();
+            showNotification('📴 Offline-Modus: Lokale Daten geladen', 'warning');
+            return true;
+        }
+    } catch (e) {
+        console.error('Laden lokal fehlgeschlagen:', e);
+    }
+    return false;
+}
+
+// Event Listeners
+function setupEventListeners() {
+    // Logout
+    const logoutBtn = document.getElementById('logout-btn');
+    if (logoutBtn) {
+        logoutBtn.addEventListener('click', async () => {
+            if (confirm('Wirklich abmelden?')) {
+                // Clean up listeners
+                [bonusInterval, chatListener, notificationsListener, topPlayersListener]
+                    .forEach(item => item && (clearInterval?.(item) || off?.(item)));
+                
+                await signOut(auth);
+                window.location.href = 'index.html';
+            }
+        });
+    }
+    
+    // Daily Bonus
+    const dailyBonusBtn = document.getElementById('daily-bonus-btn');
+    if (dailyBonusBtn) {
+        dailyBonusBtn.addEventListener('click', claimDailyBonus);
+    }
+    
+    // Quick Table
+    const quickTableBtn = document.getElementById('quick-table-btn');
+    if (quickTableBtn) {
+        quickTableBtn.addEventListener('click', createQuickTable);
+    }
+    
+    // Chat
+    const chatInput = document.getElementById('global-chat-input');
+    const chatSendBtn = document.getElementById('global-chat-send');
+    
+    if (chatInput && chatSendBtn) {
+        chatSendBtn.addEventListener('click', sendGlobalMessage);
+        chatInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendGlobalMessage();
+            }
+        });
+    }
+}
+
+window.createQuickTable = async function() {
+    try {
+        const tableId = 'table_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+        
+        const tableData = {
+            id: tableId,
+            name: `${userData.username}'s Tisch`,
+            owner: currentUser.uid,
+            ownerName: userData.username,
+            players: {
+                [currentUser.uid]: {
+                    name: userData.username,
+                    chips: userData.chips,
+                    avatar: userData.profileImage,
+                    joinedAt: Date.now()
+                }
+            },
+            maxPlayers: 6,
+            minBet: 10,
+            isPrivate: false,
+            status: 'waiting',
+            currentRound: 0,
+            chat: {},
+            settings: {
+                autoStart: true,
+                bettingTime: 30,
+                minChips: 100
+            },
+            createdAt: Date.now()
+        };
+        
+        await set(ref(database, 'tables/' + tableId), tableData);
+        
+        showNotification('🎲 Tisch erstellt! Weiterleitung...', 'success');
+        
+        setTimeout(() => {
+            window.location.href = `game.html?table=${tableId}`;
+        }, 1500);
+        
+    } catch (error) {
+        console.error('Tisch erstellen fehlgeschlagen:', error);
+        showNotification('Fehler beim Erstellen des Tisches', 'error');
+    }
+};
+
+// Clean up
 window.addEventListener('beforeunload', () => {
     if (bonusInterval) clearInterval(bonusInterval);
-    if (chatListener) chatListener();
+    if (chatListener) off(ref(database, 'global_chat'), chatListener);
+    if (notificationsListener) off(ref(database, 'notifications/' + currentUser.uid), notificationsListener);
+    if (topPlayersListener) off(ref(database, 'users'), topPlayersListener);
 });
+
+// Make functions globally available
+window.claimDailyBonus = claimDailyBonus;
+window.joinTable = window.joinTable;
