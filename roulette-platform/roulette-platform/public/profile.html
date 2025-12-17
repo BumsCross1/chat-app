@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profil - Premium Roulette</title>
+    <link rel="stylesheet" href="/src/css/main.css">
+    <link rel="stylesheet" href="/src/css/profile.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div class="profile-container">
+        <!-- Header -->
+        <header class="profile-header">
+            <div class="header-content">
+                <button class="btn-back" onclick="window.location.href='/dashboard.html'">
+                    <i class="fas fa-arrow-left"></i>
+                </button>
+                <h1><i class="fas fa-user"></i> Mein Profil</h1>
+                <div class="header-actions">
+                    <button class="btn-save" id="save-profile">
+                        <i class="fas fa-save"></i>
+                        Speichern
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="profile-main">
+            <!-- Profile Card -->
+            <div class="profile-card">
+                <div class="profile-header-section">
+                    <div class="avatar-container">
+                        <img id="profile-avatar" src="" alt="Profilbild" class="profile-avatar">
+                        <div class="avatar-overlay">
+                            <label for="avatar-upload" class="btn-avatar-upload">
+                                <i class="fas fa-camera"></i>
+                            </label>
+                            <input type="file" id="avatar-upload" accept="image/*" style="display: none;">
+                        </div>
+                    </div>
+                    
+                    <div class="profile-info">
+                        <div class="username-display">
+                            <h2 id="profile-username">Benutzername</h2>
+                            <span class="user-level">Level <span id="profile-level">1</span></span>
+                        </div>
+                        
+                        <div class="user-stats">
+                            <div class="stat">
+                                <i class="fas fa-coins"></i>
+                                <div>
+                                    <div class="stat-value" id="profile-chips">0</div>
+                                    <div class="stat-label">Chips</div>
+                                </div>
+                            </div>
+                            <div class="stat">
+                                <i class="fas fa-trophy"></i>
+                                <div>
+                                    <div class="stat-value" id="profile-wins">0</div>
+                                    <div class="stat-label">Gewinne</div>
+                                </div>
+                            </div>
+                            <div class="stat">
+                                <i class="fas fa-chart-line"></i>
+                                <div>
+                                    <div class="stat-value" id="profile-winrate">0%</div>
+                                    <div class="stat-label">Gewinnrate</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="profile-progress">
+                    <div class="progress-header">
+                        <span>Fortschritt zum nächsten Level</span>
+                        <span id="xp-progress">0/1000</span>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="xp-bar"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Profile Form -->
+            <div class="profile-form">
+                <h3><i class="fas fa-edit"></i> Profil bearbeiten</h3>
+                
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="username"><i class="fas fa-user"></i> Benutzername</label>
+                        <input type="text" id="username" placeholder="Wähle einen Benutzernamen" maxlength="20">
+                        <div class="form-hint">Mindestens 3 Zeichen, maximal 20</div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="email"><i class="fas fa-envelope"></i> E-Mail</label>
+                        <input type="email" id="email" placeholder="Deine E-Mail-Adresse" disabled>
+                        <div class="form-hint">E-Mail kann nicht geändert werden</div>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label><i class="fas fa-palette"></i> Profilfarbe</label>
+                    <div class="color-picker" id="color-picker">
+                        <div class="color-option" data-color="#4CAF50"></div>
+                        <div class="color-option" data-color="#2196F3"></div>
+                        <div class="color-option" data-color="#9C27B0"></div>
+                        <div class="color-option" data-color="#FF9800"></div>
+                        <div class="color-option" data-color="#F44336"></div>
+                        <div class="color-option" data-color="#009688"></div>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="bio"><i class="fas fa-comment"></i> Bio</label>
+                    <textarea id="bio" placeholder="Erzähle etwas über dich..." maxlength="200" rows="3"></textarea>
+                    <div class="char-count"><span id="bio-chars">0</span>/200</div>
+                </div>
+            </div>
+
+            <!-- Statistics -->
+            <div class="statistics-section">
+                <h3><i class="fas fa-chart-bar"></i> Detaillierte Statistiken</h3>
+                
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-gamepad"></i>
+                        </div>
+                        <div class="stat-content">
+                            <div class="stat-value" id="stat-games-played">0</div>
+                            <div class="stat-label">Spiele gespielt</div>
+                        </div>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-trophy"></i>
+                        </div>
+                        <div class="stat-content">
+                            <div class="stat-value" id="stat-games-won">0</div>
+                            <div class="stat-label">Spiele gewonnen</div>
+                        </div>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-fire"></i>
+                        </div>
+                        <div class="stat-content">
+                            <div class="stat-value" id="stat-win-streak">0</div>
+                            <div class="stat-label">Bestes Gewinnserie</div>
+                        </div>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-crown"></i>
+                        </div>
+                        <div class="stat-content">
+                            <div class="stat-value" id="stat-highest-win">0</div>
+                            <div class="stat-label">Höchster Gewinn</div>
+                        </div>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-money-bill-wave"></i>
+                        </div>
+                        <div class="stat-content">
+                            <div class="stat-value" id="stat-total-wagered">0</div>
+                            <div class="stat-label">Gesamteinsatz</div>
+                        </div>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-hand-holding-usd"></i>
+                        </div>
+                        <div class="stat-content">
+                            <div class="stat-value" id="stat-total-won">0</div>
+                            <div class="stat-label">Gesamtgewinn</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Achievement -->
+            <div class="achievements-section">
+                <h3><i class="fas fa-award"></i> Errungenschaften</h3>
+                <div class="achievements-grid" id="achievements-grid">
+                    <div class="loading">Lade Errungenschaften...</div>
+                </div>
+            </div>
+
+            <!-- Game History -->
+            <div class="history-section">
+                <h3><i class="fas fa-history"></i> Spielverlauf</h3>
+                <div class="history-controls">
+                    <div class="filter-group">
+                        <label for="history-filter"><i class="fas fa-filter"></i> Filter</label>
+                        <select id="history-filter">
+                            <option value="all">Alle Spiele</option>
+                            <option value="won">Gewonnene Spiele</option>
+                            <option value="lost">Verlorene Spiele</option>
+                            <option value="today">Heute</option>
+                            <option value="week">Diese Woche</option>
+                        </select>
+                    </div>
+                    <button class="btn-load-more" id="load-more">
+                        <i class="fas fa-redo"></i>
+                        Mehr laden
+                    </button>
+                </div>
+                
+                <div class="history-list" id="history-list">
+                    <div class="loading">Lade Spielverlauf...</div>
+                </div>
+            </div>
+
+            <!-- Danger Zone -->
+            <div class="danger-zone">
+                <h3><i class="fas fa-exclamation-triangle"></i> Gefahrenzone</h3>
+                <div class="danger-actions">
+                    <button class="btn-danger" id="reset-stats">
+                        <i class="fas fa-redo"></i>
+                        Statistiken zurücksetzen
+                    </button>
+                    <button class="btn-danger" id="delete-account">
+                        <i class="fas fa-trash"></i>
+                        Konto löschen
+                    </button>
+                </div>
+                <p class="warning-text">
+                    <i class="fas fa-exclamation-circle"></i>
+                    Diese Aktionen können nicht rückgängig gemacht werden!
+                </p>
+            </div>
+        </main>
+    </div>
+
+    <!-- Confirmation Modal -->
+    <div class="modal" id="confirm-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2><i class="fas fa-exclamation-triangle"></i> Bestätigung erforderlich</h2>
+                <button class="btn-close" id="close-confirm">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p id="confirm-message">Bist du sicher, dass du diese Aktion durchführen möchtest?</p>
+                <div class="modal-actions">
+                    <button class="btn-secondary" id="cancel-action">Abbrechen</button>
+                    <button class="btn-danger" id="confirm-action">Bestätigen</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Success Modal -->
+    <div class="modal" id="success-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2><i class="fas fa-check-circle"></i> Erfolg</h2>
+                <button class="btn-close" id="close-success">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p id="success-message">Änderungen erfolgreich gespeichert!</p>
+                <button class="btn-primary" id="close-success-btn">OK</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script type="module" src="/src/js/config/firebase.js"></script>
+    <script type="module" src="/src/js/modules/profile.js"></script>
+</body>
+</html>

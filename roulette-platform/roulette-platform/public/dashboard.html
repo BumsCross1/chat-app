@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Premium Roulette</title>
+    <link rel="stylesheet" href="/src/css/main.css">
+    <link rel="stylesheet" href="/src/css/dashboard.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- Header -->
+        <header class="dashboard-header">
+            <div class="logo">
+                <i class="fas fa-dice"></i>
+                <h1>Premium Roulette</h1>
+            </div>
+            <div class="user-menu">
+                <div class="user-info">
+                    <img id="user-avatar" src="" alt="Avatar" class="avatar">
+                    <div class="user-details">
+                        <span id="username" class="username"></span>
+                        <span id="user-chips" class="chips">0 Chips</span>
+                    </div>
+                </div>
+                <button id="logout-btn" class="btn-logout" title="Abmelden">
+                    <i class="fas fa-sign-out-alt"></i>
+                </button>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="dashboard-main">
+            <!-- Welcome Section -->
+            <section class="welcome-section">
+                <h2>Willkommen, <span id="welcome-name">Spieler</span>!</h2>
+                <p class="subtitle">Dein aktueller Kontostand: <strong id="total-chips">10.000</strong> Chips</p>
+            </section>
+
+            <!-- Quick Actions -->
+            <section class="quick-actions">
+                <h3><i class="fas fa-bolt"></i> Schnellzugriff</h3>
+                <div class="actions-grid">
+                    <button class="action-card" onclick="window.location.href='game.html'">
+                        <i class="fas fa-play-circle"></i>
+                        <span>Sofort Spielen</span>
+                    </button>
+                    <button class="action-card" id="daily-bonus-btn">
+                        <i class="fas fa-gift"></i>
+                        <span>Täglicher Bonus</span>
+                    </button>
+                    <button class="action-card" onclick="window.location.href='game.html?mode=private'">
+                        <i class="fas fa-lock"></i>
+                        <span>Privater Tisch</span>
+                    </button>
+                    <button class="action-card" onclick="window.location.href='#friends'">
+                        <i class="fas fa-user-friends"></i>
+                        <span>Freunde</span>
+                    </button>
+                </div>
+            </section>
+
+            <!-- Statistics -->
+            <section class="statistics-section">
+                <h3><i class="fas fa-chart-line"></i> Meine Statistiken</h3>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-trophy"></i>
+                        </div>
+                        <div class="stat-content">
+                            <div class="stat-value" id="games-won">0</div>
+                            <div class="stat-label">Gewonnene Spiele</div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-percentage"></i>
+                        </div>
+                        <div class="stat-content">
+                            <div class="stat-value" id="win-rate">0%</div>
+                            <div class="stat-label">Gewinnquote</div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-fire"></i>
+                        </div>
+                        <div class="stat-content">
+                            <div class="stat-value" id="win-streak">0</div>
+                            <div class="stat-label">Siegesserie</div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-crown"></i>
+                        </div>
+                        <div class="stat-content">
+                            <div class="stat-value" id="user-rank">#--</div>
+                            <div class="stat-label">Rang</div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Top Players -->
+            <section class="top-players-section">
+                <h3><i class="fas fa-medal"></i> Top Spieler</h3>
+                <div class="players-list" id="top-players">
+                    <div class="loading">Lade Top-Spieler...</div>
+                </div>
+            </section>
+
+            <!-- Recent Games -->
+            <section class="recent-games-section">
+                <h3><i class="fas fa-history"></i> Letzte Spiele</h3>
+                <div class="games-list" id="recent-games">
+                    <div class="loading">Lade Spiele...</div>
+                </div>
+            </section>
+        </main>
+
+        <!-- Sidebar -->
+        <aside class="dashboard-sidebar">
+            <nav class="sidebar-nav">
+                <a href="dashboard.html" class="nav-item active">
+                    <i class="fas fa-home"></i>
+                    <span>Dashboard</span>
+                </a>
+                <a href="game.html" class="nav-item">
+                    <i class="fas fa-dice"></i>
+                    <span>Roulette</span>
+                </a>
+                <a href="#tables" class="nav-item">
+                    <i class="fas fa-table"></i>
+                    <span>Tische</span>
+                </a>
+                <a href="#friends" class="nav-item">
+                    <i class="fas fa-user-friends"></i>
+                    <span>Freunde</span>
+                    <span class="badge" id="friend-requests">0</span>
+                </a>
+                <a href="#profile" class="nav-item">
+                    <i class="fas fa-user"></i>
+                    <span>Profil</span>
+                </a>
+                <a href="#shop" class="nav-item">
+                    <i class="fas fa-shopping-cart"></i>
+                    <span>Shop</span>
+                </a>
+            </nav>
+
+            <!-- Bonus Timer -->
+            <div class="bonus-timer">
+                <h4><i class="fas fa-gift"></i> Nächster Bonus</h4>
+                <div class="timer" id="bonus-timer">10:00</div>
+                <p class="timer-info">Alle 10 Minuten erhältst du 250 Bonus-Chips!</p>
+            </div>
+        </aside>
+    </div>
+
+    <!-- Scripts -->
+    <script type="module" src="/src/js/config/firebase.js"></script>
+    <script type="module" src="/src/js/core/user.js"></script>
+    <script type="module" src="/src/js/modules/statistics.js"></script>
+</body>
+</html>

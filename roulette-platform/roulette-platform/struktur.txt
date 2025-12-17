@@ -1,0 +1,38 @@
+roulette-platform/
+├── public/
+│   ├── index.html              # Startseite (Login/Registrierung)
+│   ├── dashboard.html          # Haupt-Dashboard
+│   ├── game.html              # Roulette-Spielseite
+│   ├── profile.html           # Benutzerprofil
+│   ├── admin.html             # Admin-Bereich (optional)
+│   └── assets/
+│       ├── sounds/            # Soundeffekte
+│       └── icons/             # Icons
+├── src/
+│   ├── css/
+│   │   ├── main.css           # Globale Stile
+│   │   ├── auth.css           # Authentifizierung
+│   │   ├── game.css           # Spielseite
+│   │   ├── dashboard.css      # Dashboard
+│   │   └── components/        # Komponenten-Stile
+│   ├── js/
+│   │   ├── core/
+│   │   │   ├── auth.js        # Authentifizierung
+│   │   │   ├── user.js        # Benutzerverwaltung
+│   │   │   └── game-engine.js # Spiel-Logik-Kern
+│   │   ├── modules/
+│   │   │   ├── roulette.js    # Roulette-Logik & UI
+│   │   │   ├── betting.js     # Setz-System
+│   │   │   ├── statistics.js  # Statistik-System
+│   │   │   ├── chat.js        # Chat-System
+│   │   │   └── history.js     # Spielverlauf
+│   │   ├── utils/
+│   │   │   ├── helpers.js     # Hilfsfunktionen
+│   │   │   ├── notifications.js # Benachrichtigungen
+│   │   │   └── validators.js  # Validierung
+│   │   └── config/
+│   │       └── firebase.js    # Firebase-Konfiguration
+│   └── data/
+│       ├── constants.js       # Konstanten
+│       └── schemas.js         # Daten-Schemas
+└── package.json

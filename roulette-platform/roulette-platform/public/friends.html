@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="de">
+<!-- friends.html -->
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Freunde - Samenroulette</title>
+    <link rel="stylesheet" href="style/main.css">
+    <link rel="stylesheet" href="style/friends.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="header">
+            <div class="logo">
+                <i class="fas fa-seedling"></i>
+                <h2>Samenroulette</h2>
+            </div>
+            <div class="user-info">
+                <button class="back-btn" onclick="window.location.href='dashboard.html'">
+                    <i class="fas fa-arrow-left"></i>
+                    Zurück
+                </button>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main-content full-width">
+            <div class="friends-container">
+                <!-- Header -->
+                <div class="friends-header">
+                    <h1><i class="fas fa-user-friends"></i> Freunde verwalten</h1>
+                    <p>Verwalte deine Freunde und erstelle private Tische</p>
+                </div>
+
+                <!-- Search Section -->
+                <div class="search-section">
+                    <div class="search-box">
+                        <i class="fas fa-search"></i>
+                        <input type="text" id="friend-search" placeholder="Freunde nach Benutzername suchen...">
+                        <button id="search-btn" onclick="searchUsers()">
+                            <i class="fas fa-search"></i>
+                            Suchen
+                        </button>
+                    </div>
+                    <div id="search-results" class="search-results">
+                        <!-- Search results will appear here -->
+                    </div>
+                </div>
+
+                <!-- Tabs -->
+                <div class="friends-tabs">
+                    <button class="tab active" onclick="showTab('friends-list')">
+                        <i class="fas fa-users"></i>
+                        Meine Freunde
+                        <span class="badge" id="friends-count">0</span>
+                    </button>
+                    <button class="tab" onclick="showTab('friend-requests')">
+                        <i class="fas fa-user-plus"></i>
+                        Freundesanfragen
+                        <span class="badge" id="requests-count">0</span>
+                    </button>
+                    <button class="tab" onclick="showTab('private-tables')">
+                        <i class="fas fa-table"></i>
+                        Private Tische
+                    </button>
+                </div>
+
+                <!-- Friends List -->
+                <div class="tab-content active" id="friends-list-tab">
+                    <div class="friends-grid" id="friends-list">
+                        <div class="loading">Lade Freunde...</div>
+                    </div>
+                </div>
+
+                <!-- Friend Requests -->
+                <div class="tab-content" id="friend-requests-tab">
+                    <div class="requests-list" id="friend-requests">
+                        <div class="loading">Lade Freundesanfragen...</div>
+                    </div>
+                </div>
+
+                <!-- Private Tables -->
+                <div class="tab-content" id="private-tables-tab">
+                    <div class="tables-controls">
+                        <button class="btn-primary" onclick="createPrivateTable()">
+                            <i class="fas fa-plus"></i>
+                            Neuen privaten Tisch erstellen
+                        </button>
+                    </div>
+                    <div class="private-tables" id="private-tables">
+                        <div class="loading">Lade private Tische...</div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Create Private Table Modal -->
+    <div class="modal" id="create-private-table-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Privaten Tisch erstellen</h2>
+                <button class="close-modal" onclick="closeModal('create-private-table-modal')">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="table-name">Tischname</label>
+                    <input type="text" id="private-table-name" placeholder="Privater Spieltisch">
+                </div>
+                <div class="form-group">
+                    <label for="table-friends">Freunde einladen</label>
+                    <div id="friends-selector" class="friends-selector">
+                        <!-- Friends will be loaded here -->
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="table-password">Passwort (optional)</label>
+                    <input type="password" id="private-table-password" placeholder="Für zusätzlichen Schutz">
+                </div>
+                <div class="form-group">
+                    <label for="table-settings">Spiel-Einstellungen</label>
+                    <div class="settings-grid">
+                        <div>
+                            <label>Min. Einsatz</label>
+                            <select id="private-min-bet">
+                                <option value="10">10 Chips</option>
+                                <option value="50" selected>50 Chips</option>
+                                <option value="100">100 Chips</option>
+                                <option value="500">500 Chips</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label>Max. Runden</label>
+                            <select id="private-max-rounds">
+                                <option value="10">10 Runden</option>
+                                <option value="20" selected>20 Runden</option>
+                                <option value="50">50 Runden</option>
+                                <option value="100">100 Runden</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <button class="btn-primary" onclick="createFriendsTable()">Tisch erstellen & Einladungen senden</button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="js/config/firebase.js"></script>
+    <script type="module" src="js/modules/user.js"></script>
+    <script type="module" src="js/modules/friends.js"></script>
+</body>
+</html>
